@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 
+	analytics "cursor-hackathon/backend/internal/application/analytics"
 	intake "cursor-hackathon/backend/internal/application/intake"
 	tasking "cursor-hackathon/backend/internal/application/tasking"
 	verification "cursor-hackathon/backend/internal/application/verification"
@@ -19,6 +20,7 @@ import (
 	domain "cursor-hackathon/backend/internal/domain/vision"
 	"cursor-hackathon/backend/internal/infrastructure/anonymizer"
 	"cursor-hackathon/backend/internal/infrastructure/demo"
+	analyticshttp "cursor-hackathon/backend/internal/infrastructure/http/handler/analytics"
 	reporthttp "cursor-hackathon/backend/internal/infrastructure/http/handler/report"
 	taskhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/task"
 	verificationhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/verification"
@@ -105,11 +107,16 @@ func NewMux() *http.ServeMux {
 	verificationSvc := verification.NewService(anonymizerAdapter{anon}, uc, evidenceStore, taskStore, reportStore)
 	verificationHandler := verificationhttp.NewHandler(verificationSvc)
 
+	// Wave 2 analytics: manager dashboard aggregations over reports + tasks.
+	analyticsSvc := analytics.NewService(reportStore, taskStore)
+	analyticsHandler := analyticshttp.NewHandler(analyticsSvc)
+
 	mux := http.NewServeMux()
 	handler.Register(mux)
 	reportHandler.Register(mux)
 	taskHandler.Register(mux)
 	verificationHandler.Register(mux)
+	analyticsHandler.Register(mux)
 	registerHealth(mux)
 	return mux
 }

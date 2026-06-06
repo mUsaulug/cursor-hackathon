@@ -59,6 +59,32 @@ func TestE2EFullLifecycle(t *testing.T) {
 	if closed.Status != task.StatusCompleted {
 		t.Errorf("status = %q, want completed", closed.Status)
 	}
+
+	// manager dashboard reflects the completed work
+	var summary struct {
+		TotalReports   int `json:"total_reports"`
+		TotalTasks     int `json:"total_tasks"`
+		CompletedTasks int `json:"completed_tasks"`
+	}
+	getJSONRole(t, srv.URL+"/api/v1/analytics/summary", "manager", &summary)
+	if summary.TotalReports < 1 || summary.CompletedTasks < 1 {
+		t.Errorf("analytics summary not reflecting work: %+v", summary)
+	}
+}
+
+func getJSONRole(t *testing.T, url, role string, out any) {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodGet, url, nil)
+	req.Header.Set("X-Role", role)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("GET %s: %v", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET %s status = %d", url, resp.StatusCode)
+	}
+	decode(t, resp, out)
 }
 
 // postMultipartTo posts a multipart body expecting 201 Created.
