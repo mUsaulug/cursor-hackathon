@@ -1,0 +1,43 @@
+# CivicLens Urban Object Ontology
+# Maps raw model labels to normalized urban object types.
+# Source of truth for the Detection Normalizer (design doc 5.1, 5.2).
+# Change rules here, not code. Schema kept to <=2 nesting levels for the
+# stdlib-only YAML reader in backend/internal/shared/config.
+version: "1.0"
+
+# COCO labels emitted by facebook/detr-resnet-50 (live baseline) -> type.
+# Only inanimate urban infrastructure is mapped; PII classes are handled
+# separately by blocked_labels / hide_labels below (KVKK).
+coco:
+  traffic light: traffic_signal
+  stop sign: traffic_signal
+  fire hydrant: street_furniture
+  bench: street_furniture
+  parking meter: street_furniture
+  potted plant: street_furniture
+
+# RDD2022 classes emitted by rezzzq/yolo12s-road-damage-rdd2022 -> type.
+# D00 longitudinal crack, D10 transverse crack, D20 alligator crack, D40 pothole.
+rdd:
+  D00: road_damage
+  D10: road_damage
+  D20: road_damage
+  D40: road_damage
+  pothole: road_damage
+  crack: road_damage
+
+# Anything not mapped above resolves to this type and is routed to review.
+fallback_type: unknown
+
+# KVKK Privacy Guard (design doc 5.3, 9.4). Deterministic, never LLM.
+# blocked: removed from results entirely (counted in privacy.blocked_count).
+blocked_labels:
+  - person
+  - bicycle
+  - motorcycle
+
+# hide: inanimate but tracking/plate risk -> excluded from results by default.
+hide_labels:
+  - car
+  - truck
+  - bus

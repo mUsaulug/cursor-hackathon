@@ -1,0 +1,16 @@
+# CivicLens Priority Policy
+# Maps normalized object type -> maintenance priority (design doc 5.5).
+# Evidence-Grounded Decision Layer: priority is rule-based, never LLM.
+# Priority and ReviewStatus are SEPARATE concepts. "needs_review" is NOT a priority.
+version: "1.0"
+
+priority_by_type:
+  road_damage: high
+  traffic_signal: medium
+  sidewalk: medium
+  street_furniture: low
+  waste_asset: low
+  unknown: low
+
+# Default when a type is missing from the map above.
+default_priority: low

@@ -15,6 +15,11 @@ Short log of significant decisions made during the hackathon. Update as you go.
 | Bulletin received | Backend must adopt `masterfabric-go` architecture; keep current `main.go` only as a temporary health stub | Bulletin forbids custom backend architecture; real structure delivered at 11:00 | No effort spent on custom backend design; ready to swap in delivered architecture | Team |
 | Bulletin received | Add `docs/KVKK-COMPLIANCE.md` deletion/anonymization record | Signed KVKK document is a prize prerequisite | Compliance evidence ready to complete before jury | Team |
 | Bulletin received | Plan to commit incrementally with meaningful messages from the start | Jury scores commit history; bulk upload risks disqualification | Continuous version control discipline | Team |
+| Build kickoff | Build `vision` bounded context with Go stdlib in design-doc §4 hexagonal layout (`internal/domain|application|infrastructure|shared`) since `masterfabric-go` was not delivered to the workspace | Keep momentum; layers map 1:1 to masterfabric-go so a later swap is cheap | Backend progresses now; restructure if the real repo arrives | Team |
+| Build kickoff | Exclude Redis + Kafka for the MVP | Design doc §3 lists them as "won't use", §16 calls Kafka a risk, and `backend.mdc` mandates stdlib-only | In-memory analysis store; ports defined so adapters can be added later | Team |
+| Build kickoff | Precomputed-first inference; live HF DETR + OpenRouter optional behind env vars | No API keys provided; demo must run offline and reproducibly | Reliable demo path with no live dependency; live path degrades gracefully | Team |
+| Build kickoff | Rule YAML files are the source of truth, read by a minimal stdlib YAML reader (no `gopkg.in/yaml.v3`) | `backend.mdc` forbids non-stdlib deps; rules must stay human-editable | `docs/rules/*.yaml` drive normalizer/priority/confidence; schema capped at 2 nesting levels | Team |
+| Build kickoff | Use the Hugging Face MCP to generate REAL precomputed fixtures and KVKK-safe synthetic sample images (not mock) | MCP gives real inference (`SAM3`) and reproducible image-gen without shipping an API key | Stronger "precomputed inference, not mock" claim; PII-avoidance by design | Team |
 
 ## How to use this log
 

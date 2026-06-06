@@ -12,6 +12,7 @@ mobile/dist/
 
 # Go
 backend/bin/
+backend/backend
 backend/*.exe
 backend/*.test
 *.out

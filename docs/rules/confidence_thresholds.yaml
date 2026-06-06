@@ -1,0 +1,19 @@
+# CivicLens Confidence Thresholds
+# Confidence Evaluator + Human Review Router (design doc 5.4, 5.6).
+# score >= auto_accept            -> auto_accepted
+# needs_review <= score < accept  -> needs_review
+# score < needs_review            -> rejected
+# Per-type auto_accept overrides the default (calibration, design doc 9.5).
+version: "1.0"
+
+default_auto_accept: 0.80
+default_needs_review: 0.50
+
+# Per normalized object type auto_accept override.
+auto_accept_by_type:
+  road_damage: 0.85
+  traffic_signal: 0.75
+  sidewalk: 0.70
+  street_furniture: 0.60
+  waste_asset: 0.60
+  unknown: 0.95
