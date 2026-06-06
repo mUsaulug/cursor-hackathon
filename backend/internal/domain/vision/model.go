@@ -12,6 +12,7 @@ const SchemaVersion = "1.0"
 type AnalysisResult struct {
 	SchemaVersion  string        `json:"schema_version"`
 	AnalysisID     string        `json:"analysis_id"`
+	ReportID       string        `json:"report_id,omitempty"` // Wave 2: links an analysis to a citizen/staff report
 	SourceType     string        `json:"source_type"`
 	SourceRef      string        `json:"source_ref"`
 	Location       *Location     `json:"location,omitempty"`

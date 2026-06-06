@@ -15,6 +15,7 @@ type AnalyzeCommand struct {
 	Image       []byte
 	SourceType  string
 	SourceRef   string
+	ReportID    string // Wave 2: optional link to a Report (intake/completion)
 	ModelMode   string
 	ImageWidth  int
 	ImageHeight int

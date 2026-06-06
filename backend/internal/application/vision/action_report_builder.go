@@ -63,6 +63,7 @@ func buildAnalysisResult(
 	return domain.AnalysisResult{
 		SchemaVersion:  domain.SchemaVersion,
 		AnalysisID:     analysisID,
+		ReportID:       cmd.ReportID,
 		SourceType:     cmd.SourceType,
 		SourceRef:      cmd.SourceRef,
 		Location:       cmd.Location,
