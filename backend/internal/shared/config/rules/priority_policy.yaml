@@ -1,0 +1,14 @@
+# CivicLens Priority Policy (runtime canonical copy; embedded at build).
+# Human-facing copy in docs/rules/priority_policy.yaml is kept in sync.
+# Priority and ReviewStatus are SEPARATE concepts. "needs_review" is NOT a priority.
+version: "1.0"
+
+priority_by_type:
+  road_damage: high
+  traffic_signal: medium
+  sidewalk: medium
+  street_furniture: low
+  waste_asset: low
+  unknown: low
+
+default_priority: low

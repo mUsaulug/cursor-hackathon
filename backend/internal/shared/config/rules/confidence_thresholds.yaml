@@ -1,0 +1,17 @@
+# CivicLens Confidence Thresholds (runtime canonical copy; embedded at build).
+# Human-facing copy in docs/rules/confidence_thresholds.yaml is kept in sync.
+# score >= auto_accept            -> auto_accepted
+# needs_review <= score < accept  -> needs_review
+# score < needs_review            -> rejected
+version: "1.0"
+
+default_auto_accept: 0.80
+default_needs_review: 0.50
+
+auto_accept_by_type:
+  road_damage: 0.85
+  traffic_signal: 0.75
+  sidewalk: 0.70
+  street_furniture: 0.60
+  waste_asset: 0.60
+  unknown: 0.95

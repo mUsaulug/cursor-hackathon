@@ -1,0 +1,37 @@
+# CivicLens Urban Object Ontology (runtime canonical copy; embedded at build).
+# Human-facing copy in docs/rules/ontology.yaml is kept in sync.
+# Schema kept to <=2 nesting levels for the stdlib-only YAML reader.
+version: "1.0"
+
+# COCO labels emitted by facebook/detr-resnet-50 (live baseline) -> type.
+coco:
+  traffic light: traffic_signal
+  stop sign: traffic_signal
+  fire hydrant: street_furniture
+  bench: street_furniture
+  parking meter: street_furniture
+  potted plant: street_furniture
+
+# RDD2022 classes emitted by rezzzq/yolo12s-road-damage-rdd2022 -> type.
+rdd:
+  D00: road_damage
+  D10: road_damage
+  D20: road_damage
+  D40: road_damage
+  pothole: road_damage
+  crack: road_damage
+
+# Anything not mapped above resolves to this type and is routed to review.
+fallback_type: unknown
+
+# KVKK Privacy Guard. blocked: removed entirely (counted in blocked_count).
+blocked_labels:
+  - person
+  - bicycle
+  - motorcycle
+
+# hide: inanimate but tracking/plate risk -> excluded from results by default.
+hide_labels:
+  - car
+  - truck
+  - bus
