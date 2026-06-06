@@ -13,11 +13,13 @@ import (
 	"os"
 
 	intake "cursor-hackathon/backend/internal/application/intake"
+	tasking "cursor-hackathon/backend/internal/application/tasking"
 	appvision "cursor-hackathon/backend/internal/application/vision"
 	domain "cursor-hackathon/backend/internal/domain/vision"
 	"cursor-hackathon/backend/internal/infrastructure/anonymizer"
 	"cursor-hackathon/backend/internal/infrastructure/demo"
 	reporthttp "cursor-hackathon/backend/internal/infrastructure/http/handler/report"
+	taskhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/task"
 	visionhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/vision"
 	"cursor-hackathon/backend/internal/infrastructure/huggingface"
 	"cursor-hackathon/backend/internal/infrastructure/openrouter"
@@ -89,9 +91,16 @@ func NewMux() *http.ServeMux {
 	intakeUC := intake.NewCreateReportUseCase(anonymizerAdapter{anon}, uc, reportStore, rules)
 	reportHandler := reporthttp.NewHandler(intakeUC, reportStore)
 
+	// Wave 2 tasking: operator turns an accepted report into a work order with
+	// SLA + lifecycle; field staff assign/start.
+	taskStore := store.NewTaskInMemory()
+	taskingSvc := tasking.NewService(taskStore, reportStore)
+	taskHandler := taskhttp.NewHandler(taskingSvc)
+
 	mux := http.NewServeMux()
 	handler.Register(mux)
 	reportHandler.Register(mux)
+	taskHandler.Register(mux)
 	registerHealth(mux)
 	return mux
 }
