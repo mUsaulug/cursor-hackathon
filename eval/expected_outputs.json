@@ -1,0 +1,24 @@
+{
+  "description": "Expected normalized outputs for the precomputed demo scenes. These are deterministic given the embedded fixtures and rule files; used for reproducibility checks (design doc 12).",
+  "scenes": {
+    "sample_street_traffic": {
+      "model_mode": "precomputed",
+      "privacy": { "kvkk_safe": true, "raw_image_stored": false, "blocked_count": 1, "pii_strategy": "avoidance_by_design" },
+      "kept_detections": [
+        { "normalized_object_type": "traffic_signal", "priority": "medium", "review_status": "auto_accepted" },
+        { "normalized_object_type": "street_furniture", "priority": "low", "review_status": "auto_accepted" },
+        { "normalized_object_type": "street_furniture", "priority": "low", "review_status": "auto_accepted" }
+      ],
+      "filtered": ["person (blocked)", "car (hidden)"]
+    },
+    "sample_road_damage": {
+      "model_mode": "road_damage",
+      "privacy": { "kvkk_safe": true, "raw_image_stored": false, "blocked_count": 0 },
+      "kept_detections": [
+        { "normalized_object_type": "road_damage", "priority": "high", "review_status": "auto_accepted" },
+        { "normalized_object_type": "road_damage", "priority": "high", "review_status": "needs_review" },
+        { "normalized_object_type": "road_damage", "priority": "high", "review_status": "needs_review" }
+      ]
+    }
+  }
+}

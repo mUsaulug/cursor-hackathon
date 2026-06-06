@@ -1,0 +1,66 @@
+{
+  "description": "CivicLens Core smoke test cases (design doc 9.8). Run against a local backend (default http://localhost:8080). The authoritative automated version lives in backend/internal/app/e2e_test.go.",
+  "base_url": "http://localhost:8080",
+  "cases": [
+    {
+      "name": "health",
+      "method": "GET",
+      "path": "/health",
+      "expect": { "status": "ok" }
+    },
+    {
+      "name": "analyze_traffic_sample",
+      "method": "POST",
+      "path": "/api/v1/vision/analyze?source_ref=sample_street_traffic",
+      "checks": [
+        "schema_version == 1.0",
+        "raw_image_stored == false",
+        "kvkk_safe == true",
+        "privacy.blocked_count >= 1 (person filtered)",
+        "no detection has label person/car/bicycle",
+        "every detection has a real priority (never needs_review)"
+      ]
+    },
+    {
+      "name": "analyze_road_damage_hero",
+      "method": "POST",
+      "path": "/api/v1/vision/analyze?source_ref=sample_road_damage&mode=road_damage",
+      "checks": [
+        "model_mode == road_damage",
+        "at least one detection priority == high",
+        "at least one low-confidence detection review_status == needs_review"
+      ]
+    },
+    {
+      "name": "demo_results",
+      "method": "GET",
+      "path": "/api/v1/vision/demo-results",
+      "checks": ["returns 2 analyses", "reproducible across calls"]
+    },
+    {
+      "name": "reviews_list",
+      "method": "GET",
+      "path": "/api/v1/vision/reviews",
+      "checks": ["lists only needs_review detections"]
+    },
+    {
+      "name": "review_override",
+      "method": "PATCH",
+      "path": "/api/v1/vision/reviews/{detectionId}",
+      "body": { "decision": "accepted", "reviewed_by": "demo" },
+      "checks": ["target detection review_status flips to auto_accepted"]
+    },
+    {
+      "name": "model_info_transparency",
+      "method": "GET",
+      "path": "/api/v1/vision/model-info",
+      "checks": ["lists active modes", "states DETR cannot detect road damage"]
+    },
+    {
+      "name": "privacy_report",
+      "method": "GET",
+      "path": "/api/v1/vision/privacy-report",
+      "checks": ["kvkk_safe == true", "pii_strategy == avoidance_by_design"]
+    }
+  ]
+}
