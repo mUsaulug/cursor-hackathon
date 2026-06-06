@@ -121,6 +121,12 @@ func (s *Service) UploadEvidence(ctx context.Context, taskID string, image []byt
 	return ev, nil
 }
 
+// Evidence returns the latest completion evidence for a task, if any. Used by
+// the task-detail/timeline view.
+func (s *Service) Evidence(ctx context.Context, taskID string) (evidence.CompletionEvidence, bool) {
+	return s.evidence.GetByTask(ctx, taskID)
+}
+
 // CloseTask (manager) approves or reopens a verified task. approved -> completed,
 // rejected -> reopened.
 func (s *Service) CloseTask(ctx context.Context, taskID, decision string) (task.Task, error) {

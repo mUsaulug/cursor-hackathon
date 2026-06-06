@@ -27,7 +27,19 @@ func NewHandler(svc *verification.Service) *Handler { return &Handler{svc: svc} 
 // Register wires evidence + close routes.
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/tasks/{id}/evidence", h.UploadEvidence)
+	mux.HandleFunc("GET /api/v1/tasks/{id}/evidence", h.GetEvidence)
 	mux.HandleFunc("POST /api/v1/tasks/{id}/close", h.Close)
+}
+
+// GetEvidence returns the latest completion evidence for a task (for the
+// task-detail timeline). Returns 404 when no evidence has been uploaded yet.
+func (h *Handler) GetEvidence(w http.ResponseWriter, r *http.Request) {
+	ev, ok := h.svc.Evidence(r.Context(), r.PathValue("id"))
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "no evidence for task"})
+		return
+	}
+	writeJSON(w, http.StatusOK, ev)
 }
 
 // UploadEvidence accepts an "after" photo from field staff (multipart image).
