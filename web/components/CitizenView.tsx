@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { Report, UserRole } from "@/app/types";
 import ReportCard from "./ReportCard";
 
+// Istanbul center — fallback only when the browser cannot provide a location.
 const DEFAULT_LAT = "41.0082";
 const DEFAULT_LNG = "28.9784";
+
+type LocStatus = "idle" | "loading" | "granted" | "denied";
 
 type CitizenViewProps = {
   role: UserRole;
@@ -22,8 +25,9 @@ export default function CitizenView({
   description,
 }: CitizenViewProps) {
   const [formDescription, setFormDescription] = useState("");
-  const [lat, setLat] = useState(DEFAULT_LAT);
-  const [lng, setLng] = useState(DEFAULT_LNG);
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
+  const [locStatus, setLocStatus] = useState<LocStatus>("idle");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -37,6 +41,28 @@ export default function CitizenView({
       blobUrlRef.current = null;
     }
   }, []);
+
+  const requestLocation = useCallback(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocStatus("denied");
+      return;
+    }
+    setLocStatus("loading");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLat(pos.coords.latitude.toFixed(6));
+        setLng(pos.coords.longitude.toFixed(6));
+        setLocStatus("granted");
+      },
+      () => setLocStatus("denied"),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+    );
+  }, []);
+
+  // Ask for location on mount; the user can retry with the button.
+  useEffect(() => {
+    requestLocation();
+  }, [requestLocation]);
 
   const handleImageChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,8 +95,8 @@ export default function CitizenView({
         const body = new FormData();
         body.append("image", imageFile);
         body.append("description", formDescription);
-        body.append("lat", lat);
-        body.append("lng", lng);
+        body.append("lat", lat || DEFAULT_LAT);
+        body.append("lng", lng || DEFAULT_LNG);
         body.append("source_type", sourceType);
 
         const res = await apiFetch("/api/v1/reports", role, {
@@ -86,8 +112,6 @@ export default function CitizenView({
         const report: Report = await res.json();
         setCreatedReport(report);
         setFormDescription("");
-        setLat(DEFAULT_LAT);
-        setLng(DEFAULT_LNG);
         setImageFile(null);
         revokeBlobUrl();
         setImagePreview(null);
@@ -159,40 +183,29 @@ export default function CitizenView({
             />
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <div className="min-w-[140px] flex-1">
-              <label
-                htmlFor="report-lat"
-                className="mb-1.5 block text-sm font-medium text-slate-700"
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Konum
+            </label>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={requestLocation}
+                disabled={submitting || locStatus === "loading"}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
               >
-                Enlem
-              </label>
-              <input
-                id="report-lat"
-                type="text"
-                inputMode="decimal"
-                disabled={submitting}
-                value={lat}
-                onChange={(e) => setLat(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:opacity-50"
-              />
-            </div>
-            <div className="min-w-[140px] flex-1">
-              <label
-                htmlFor="report-lng"
-                className="mb-1.5 block text-sm font-medium text-slate-700"
-              >
-                Boylam
-              </label>
-              <input
-                id="report-lng"
-                type="text"
-                inputMode="decimal"
-                disabled={submitting}
-                value={lng}
-                onChange={(e) => setLng(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:opacity-50"
-              />
+                {locStatus === "loading" ? "Konum alınıyor…" : "📍 Konumumu kullan"}
+              </button>
+              {locStatus === "granted" ? (
+                <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800">
+                  Konum alındı ({lat}, {lng})
+                </span>
+              ) : null}
+              {locStatus === "denied" ? (
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+                  Konum izni yok — İstanbul merkez kullanılacak
+                </span>
+              ) : null}
             </div>
           </div>
 
