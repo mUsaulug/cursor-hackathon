@@ -70,3 +70,58 @@ export type SummaryResponse = {
   analysis_id: string;
   report: MaintenanceReport | null;
 };
+
+// ─── Wave 2 operations types ─────────────────────────────────────────────────
+
+export type UserRole = "citizen" | "field_staff" | "operator" | "manager";
+
+export type Location = { lat: number; lng: number };
+
+export type Report = {
+  report_id: string;
+  source_type: string;
+  reporter_role: string;
+  description: string;
+  location: Location | null;
+  image_ref: string;
+  analysis_id: string;
+  problem_type: string;
+  priority: string;
+  review_status: string;
+  assigned_department: string;
+  duplicate_of?: string;
+  duplicate_count: number;
+  status: string;
+  created_at: string;
+};
+
+export type Task = {
+  task_id: string;
+  report_id: string;
+  assigned_department: string;
+  assigned_to: string;
+  priority: string;
+  status: string;
+  sla: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AnalyticsSummary = {
+  total_reports: number;
+  reports_by_status: Record<string, number>;
+  reports_by_type: Record<string, number>;
+  reports_by_department: Record<string, number>;
+  needs_review: number;
+  total_tasks: number;
+  tasks_by_status: Record<string, number>;
+  completed_tasks: number;
+  avg_resolution_hours: number;
+};
+
+export type ReviewDecision = "accepted" | "rejected";
+
+export type ReviewResponse = {
+  report: Report;
+  task?: Task;
+};
