@@ -12,20 +12,24 @@ import (
 
 // Handler serves the vision API. It depends only on application ports.
 type Handler struct {
-	analyze  *appvision.AnalyzeImageUseCase
-	store    appvision.AnalysisStorePort
-	reasoner appvision.ReasonerPort
-	models   []modelEntryDTO
-	modes    []string
+	analyze    *appvision.AnalyzeImageUseCase
+	store      appvision.AnalysisStorePort
+	reasoner   appvision.ReasonerPort
+	anonymizer ImageAnonymizer
+	streetView StreetViewFetcher
+	models     []modelEntryDTO
+	modes      []string
 }
 
 // Deps bundles handler dependencies for wiring.
 type Deps struct {
-	Analyze  *appvision.AnalyzeImageUseCase
-	Store    appvision.AnalysisStorePort
-	Reasoner appvision.ReasonerPort
-	Models   []ModelDescriptor
-	Modes    []string
+	Analyze    *appvision.AnalyzeImageUseCase
+	Store      appvision.AnalysisStorePort
+	Reasoner   appvision.ReasonerPort
+	Anonymizer ImageAnonymizer
+	StreetView StreetViewFetcher
+	Models     []ModelDescriptor
+	Modes      []string
 }
 
 // ModelDescriptor is static metadata surfaced via /model-info.
@@ -43,11 +47,13 @@ func NewHandler(d Deps) *Handler {
 		models = append(models, modelEntryDTO{ModelID: m.ModelID, Mode: m.Mode, Role: m.Role, Live: m.Live})
 	}
 	return &Handler{
-		analyze:  d.Analyze,
-		store:    d.Store,
-		reasoner: d.Reasoner,
-		models:   models,
-		modes:    d.Modes,
+		analyze:    d.Analyze,
+		store:      d.Store,
+		reasoner:   d.Reasoner,
+		anonymizer: d.Anonymizer,
+		streetView: d.StreetView,
+		models:     models,
+		modes:      d.Modes,
 	}
 }
 
@@ -68,6 +74,10 @@ func (h *Handler) Register(mux *http.ServeMux) {
 func (h *Handler) Analyze(w http.ResponseWriter, r *http.Request) {
 	cmd, err := parseAnalyzeRequest(r)
 	if err != nil {
+		writeDomainError(w, err)
+		return
+	}
+	if err := h.prepareImage(r.Context(), r, &cmd); err != nil {
 		writeDomainError(w, err)
 		return
 	}
@@ -254,6 +264,8 @@ func writeDomainError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusNotFound, errorDTO{Error: err.Error()})
 	case errors.Is(err, domain.ErrUnknownModelMode):
 		writeJSON(w, http.StatusUnprocessableEntity, errorDTO{Error: err.Error()})
+	case errors.Is(err, errStreetViewUnavailable):
+		writeJSON(w, http.StatusServiceUnavailable, errorDTO{Error: err.Error()})
 	default:
 		writeJSON(w, http.StatusInternalServerError, errorDTO{Error: err.Error()})
 	}

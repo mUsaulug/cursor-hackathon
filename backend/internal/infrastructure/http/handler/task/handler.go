@@ -155,7 +155,7 @@ func writeErr(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, report.ErrReportNotFound), errors.Is(err, task.ErrTaskNotFound):
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
-	case errors.Is(err, tasking.ErrInvalidTransition):
+	case errors.Is(err, tasking.ErrInvalidTransition), errors.Is(err, tasking.ErrReportNotReviewable):
 		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 	default:
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})

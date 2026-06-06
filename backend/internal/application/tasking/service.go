@@ -14,6 +14,9 @@ import (
 // ErrInvalidTransition is returned when a task state change is not allowed.
 var ErrInvalidTransition = errors.New("tasking: invalid status transition")
 
+// ErrReportNotReviewable is returned when a report cannot become a task.
+var ErrReportNotReviewable = errors.New("tasking: report is not waiting for review")
+
 // Service orchestrates task creation and lifecycle.
 type Service struct {
 	tasks   TaskStorePort
@@ -46,6 +49,9 @@ func (s *Service) CreateFromReport(ctx context.Context, reportID, assignedTo str
 	rep, err := s.reports.Get(ctx, reportID)
 	if err != nil {
 		return task.Task{}, err
+	}
+	if rep.Status != report.StatusWaitingForReview {
+		return task.Task{}, ErrReportNotReviewable
 	}
 
 	now := s.now().Format(time.RFC3339)

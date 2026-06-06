@@ -88,6 +88,11 @@ func (s *Service) UploadEvidence(ctx context.Context, taskID string, image []byt
 		ReportID:    t.ReportID,
 		ImageWidth:  anon.Width,
 		ImageHeight: anon.Height,
+		AnonymizationMeta: &appvision.AnonymizationMeta{
+			Strategy:       anon.Strategy,
+			Anonymized:     anon.Anonymized,
+			RegionsBlurred: anon.RegionsBlurred,
+		},
 	})
 	if err != nil {
 		return evidence.CompletionEvidence{}, err
@@ -114,9 +119,13 @@ func (s *Service) UploadEvidence(ctx context.Context, taskID string, image []byt
 	// Advance task: started -> evidence_uploaded -> ai_verified.
 	t.Status = task.StatusEvidenceUploaded
 	t.UpdatedAt = now
-	_ = s.tasks.Save(ctx, t)
+	if err := s.tasks.Save(ctx, t); err != nil {
+		return evidence.CompletionEvidence{}, err
+	}
 	t.Status = task.StatusAIVerified
-	_ = s.tasks.Save(ctx, t)
+	if err := s.tasks.Save(ctx, t); err != nil {
+		return evidence.CompletionEvidence{}, err
+	}
 
 	return ev, nil
 }
@@ -147,7 +156,9 @@ func (s *Service) CloseTask(ctx context.Context, taskID, decision string) (task.
 
 	if ev, ok := s.evidence.GetByTask(ctx, taskID); ok {
 		ev.ManagerApproval = approval
-		_ = s.evidence.Save(ctx, ev)
+		if err := s.evidence.Save(ctx, ev); err != nil {
+			return task.Task{}, err
+		}
 	}
 
 	t.Status = to

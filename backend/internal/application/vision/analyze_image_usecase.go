@@ -8,18 +8,26 @@ import (
 	"cursor-hackathon/backend/internal/shared/idgen"
 )
 
+// AnonymizationMeta records ingest-time blur for honest privacy reporting.
+type AnonymizationMeta struct {
+	Strategy       string
+	Anonymized     bool
+	RegionsBlurred int
+}
+
 // AnalyzeCommand is the input to the analyze use case. Image dimensions are
 // resolved by the HTTP layer (it decodes the image) and passed in so the domain
 // stays free of image-codec concerns.
 type AnalyzeCommand struct {
-	Image       []byte
-	SourceType  string
-	SourceRef   string
-	ReportID    string // Wave 2: optional link to a Report (intake/completion)
-	ModelMode   string
-	ImageWidth  int
-	ImageHeight int
-	Location    *domain.Location
+	Image             []byte
+	SourceType        string
+	SourceRef         string
+	ReportID          string // Wave 2: optional link to a Report (intake/completion)
+	ModelMode         string
+	ImageWidth        int
+	ImageHeight       int
+	Location          *domain.Location
+	AnonymizationMeta *AnonymizationMeta
 }
 
 // AnalyzeImageUseCase orchestrates: resolve adapter -> infer -> run the
@@ -95,6 +103,16 @@ func (u *AnalyzeImageUseCase) Execute(ctx context.Context, cmd AnalyzeCommand) (
 	}
 
 	processed := u.pipeline.Process(raws)
+	if cmd.AnonymizationMeta != nil {
+		processed.Privacy = domain.PrivacyReport{
+			KVKKSafe:       true,
+			RawImageStored: false,
+			Anonymized:     cmd.AnonymizationMeta.Anonymized,
+			DeletionStatus: domain.DeletionRawNotPersisted,
+			BlockedCount:   processed.Privacy.BlockedCount,
+			PIIStrategy:    cmd.AnonymizationMeta.Strategy,
+		}
+	}
 
 	result := buildAnalysisResult(
 		u.newID(),

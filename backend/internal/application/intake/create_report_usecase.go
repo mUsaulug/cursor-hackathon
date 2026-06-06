@@ -90,6 +90,11 @@ func (u *CreateReportUseCase) Execute(ctx context.Context, cmd CreateReportComma
 		ImageWidth:  anon.Width,
 		ImageHeight: anon.Height,
 		Location:    loc,
+		AnonymizationMeta: &appvision.AnonymizationMeta{
+			Strategy:       anon.Strategy,
+			Anonymized:     anon.Anonymized,
+			RegionsBlurred: anon.RegionsBlurred,
+		},
 	})
 	if err != nil {
 		return report.Report{}, err

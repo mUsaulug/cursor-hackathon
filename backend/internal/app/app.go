@@ -30,6 +30,7 @@ import (
 	"cursor-hackathon/backend/internal/infrastructure/huggingface"
 	"cursor-hackathon/backend/internal/infrastructure/openrouter"
 	"cursor-hackathon/backend/internal/infrastructure/store"
+	"cursor-hackathon/backend/internal/infrastructure/streetview"
 	"cursor-hackathon/backend/internal/shared/config"
 )
 
@@ -78,22 +79,31 @@ func NewMux() http.Handler {
 
 	uc := appvision.NewAnalyzeImageUseCase(router, pipeline, st)
 
-	handler := visionhttp.NewHandler(visionhttp.Deps{
-		Analyze:  uc,
-		Store:    st,
-		Reasoner: reasoner,
-		Models:   models,
-		Modes:    router.Modes(),
-	})
-
-	// Wave 2 intake: KVKK anonymizer (HF detector if a token is present, else
-	// no-op for synthetic/demo) -> vision -> dedup/route -> report store.
+	// Wave 2 intake: KVKK anonymizer — HF detector when token present, else
+	// whole-frame blur (never noop on real uploads).
 	var anon *anonymizer.Anonymizer
 	if detr != nil {
 		anon = anonymizer.New(anonymizer.NewHFDetector(detr), domain.PIIStrategyBlurApplied)
 	} else {
-		anon = anonymizer.New(anonymizer.NewNoopDetector(), domain.PIIStrategyAvoidanceByDesign)
+		anon = anonymizer.New(anonymizer.WholeFrameDetector{}, domain.PIIStrategyBlurApplied)
+		log.Println("app: HF_API_TOKEN absent — whole-frame blur fallback for uploads")
 	}
+
+	var sv visionhttp.StreetViewFetcher
+	if svKey := os.Getenv("GOOGLE_STREET_VIEW_API_KEY"); svKey != "" {
+		sv = streetViewAdapter{inner: streetview.NewSource(svKey)}
+		log.Println("app: Google Street View source enabled")
+	}
+
+	handler := visionhttp.NewHandler(visionhttp.Deps{
+		Analyze:    uc,
+		Store:      st,
+		Reasoner:   reasoner,
+		Anonymizer: visionAnonymizerAdapter{inner: anonymizerAdapter{anon}},
+		StreetView: sv,
+		Models:     models,
+		Modes:      router.Modes(),
+	})
 	reportStore := store.NewReportInMemory()
 	intakeUC := intake.NewCreateReportUseCase(anonymizerAdapter{anon}, uc, reportStore, rules)
 	reportHandler := reporthttp.NewHandler(intakeUC, reportStore)
@@ -161,6 +171,30 @@ func (a anonymizerAdapter) Anonymize(ctx context.Context, img []byte) (intake.An
 		Strategy:       r.Strategy,
 		Anonymized:     r.Anonymized,
 	}, nil
+}
+
+// visionAnonymizerAdapter adapts intake anonymizer to the vision HTTP handler.
+type visionAnonymizerAdapter struct{ inner anonymizerAdapter }
+
+func (a visionAnonymizerAdapter) Anonymize(ctx context.Context, img []byte) (visionhttp.AnonymizeOutput, error) {
+	r, err := a.inner.Anonymize(ctx, img)
+	if err != nil {
+		return visionhttp.AnonymizeOutput{}, err
+	}
+	return visionhttp.AnonymizeOutput{
+		Image:          r.Image,
+		Width:          r.Width,
+		Height:         r.Height,
+		RegionsBlurred: r.RegionsBlurred,
+		Strategy:       r.Strategy,
+		Anonymized:     r.Anonymized,
+	}, nil
+}
+
+type streetViewAdapter struct{ inner *streetview.Source }
+
+func (a streetViewAdapter) Fetch(ctx context.Context, lat, lng float64) ([]byte, error) {
+	return a.inner.Fetch(ctx, lat, lng, "")
 }
 
 func registerHealth(mux *http.ServeMux) {
