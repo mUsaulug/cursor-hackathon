@@ -14,12 +14,14 @@ import (
 
 	intake "cursor-hackathon/backend/internal/application/intake"
 	tasking "cursor-hackathon/backend/internal/application/tasking"
+	verification "cursor-hackathon/backend/internal/application/verification"
 	appvision "cursor-hackathon/backend/internal/application/vision"
 	domain "cursor-hackathon/backend/internal/domain/vision"
 	"cursor-hackathon/backend/internal/infrastructure/anonymizer"
 	"cursor-hackathon/backend/internal/infrastructure/demo"
 	reporthttp "cursor-hackathon/backend/internal/infrastructure/http/handler/report"
 	taskhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/task"
+	verificationhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/verification"
 	visionhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/vision"
 	"cursor-hackathon/backend/internal/infrastructure/huggingface"
 	"cursor-hackathon/backend/internal/infrastructure/openrouter"
@@ -97,10 +99,17 @@ func NewMux() *http.ServeMux {
 	taskingSvc := tasking.NewService(taskStore, reportStore)
 	taskHandler := taskhttp.NewHandler(taskingSvc)
 
+	// Wave 2 completion verification: field staff upload an "after" photo;
+	// before/after deterministic diff; manager closes or reopens.
+	evidenceStore := store.NewEvidenceInMemory()
+	verificationSvc := verification.NewService(anonymizerAdapter{anon}, uc, evidenceStore, taskStore, reportStore)
+	verificationHandler := verificationhttp.NewHandler(verificationSvc)
+
 	mux := http.NewServeMux()
 	handler.Register(mux)
 	reportHandler.Register(mux)
 	taskHandler.Register(mux)
+	verificationHandler.Register(mux)
 	registerHealth(mux)
 	return mux
 }

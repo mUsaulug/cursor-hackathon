@@ -1,0 +1,51 @@
+# CivicLens Priority Factors (runtime canonical copy; embedded at build).
+# Human-facing copy in docs/rules/priority_factors.yaml is kept in sync.
+#
+# Deterministic multi-factor priority scoring — no LLM in the decision path.
+# Final score = type_base_score + complaint_bonus + location_risk_bonus
+# Score thresholds: critical (>=90) | high (>=60) | medium (>=30) | low (<30)
+version: "1.0"
+
+# Factor 1: Problem type base score (0-70 range).
+# Reflects inherent severity and traffic/safety impact of the object type.
+type_base_score:
+  road_damage:      60  # High safety risk; directly affects vehicle/pedestrian flow
+  traffic_signal:   50  # Signal faults cause accidents; elevated baseline
+  sidewalk:         40  # Pedestrian safety; lower vehicle throughput impact
+  waste_asset:      25  # Public health concern; less immediate danger
+  street_furniture: 20  # Quality-of-life; rarely life-threatening
+  unknown:          10  # Unclassified; conservative floor score
+
+default_type_score: 10  # Fallback for types not listed above
+
+# Factor 2: Complaint count bonus (per duplicate_count increment).
+# Each additional complaint signals broader public impact.
+complaint_bonus_per_count: 5
+complaint_bonus_cap: 20  # Capped at 20 pts (4+ complaints yield the same bonus)
+
+# Factor 3: Location risk bonus.
+# Applied when the report is near a sensitive infrastructure point.
+# Multiple bonuses are additive (e.g., near_school + near_main_road = +25).
+location_risk_bonus:
+  near_school:    15  # Children present; heightened duty of care
+  near_hospital:  15  # Emergency access; must not be obstructed
+  near_main_road: 10  # High vehicle volume amplifies hazard
+  near_bus_stop:   5  # Public transit users, including mobility-impaired
+
+# Final score → priority label thresholds.
+# Evaluation order: critical first, then high, then medium; else low.
+thresholds:
+  critical: 90
+  high:     60
+  medium:   30
+  # low: default — score < 30
+
+# ---------------------------------------------------------------------------
+# Worked examples (for reference and unit-test seeding)
+# ---------------------------------------------------------------------------
+# road_damage (60) + 3 complaints (15) + near_hospital (15) = 90  → critical
+# road_damage (60) + 0 complaints  (0) + none            (0) = 60  → high
+# traffic_signal (50) + 2 complaints (10)                    = 60  → high
+# sidewalk (40)       + 1 complaint  (5)                     = 45  → medium
+# street_furniture (20) + 0 complaints                       = 20  → low
+# unknown (10)          + 0 complaints                       = 10  → low
