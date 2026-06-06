@@ -1,6 +1,6 @@
 # CivicLens Wave 2 — Local Infrastructure
 # Kullanım: docker compose up -d
-# Backend Go: go run ./cmd/civiclens (ayrı terminalde)
+# Backend Go: cd backend && go run . (ayrı terminalde)
 #
 # Kafka topic'leri (otomatik oluşur; KAFKA_AUTO_CREATE_TOPICS_ENABLE=true):
 #   report lifecycle  : report.created, report.anonymized, report.ai_analyzed, report.dedup_checked
