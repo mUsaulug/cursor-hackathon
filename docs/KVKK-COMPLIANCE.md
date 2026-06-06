@@ -11,8 +11,8 @@ writing**. This file is that document — complete and sign it before the jury r
 
 | Field | Value |
 |-------|-------|
-| Team name | _TODO (fill before jury)_ |
-| Members | _TODO_ |
+| Team name | CivicLens (Urban AI Hackathon) |
+| Members | _Fill team roster before jury sign-off_ |
 | Date | 2026-06-06 |
 | Data sources used | HF models (DETR, RDD2022 YOLO); synthetic images generated via HF MCP image-gen. Google Street View: opt-in, disabled by default (no key used in MVP). |
 | Model purpose | Inanimate urban objects only (road damage, traffic signals, street furniture, waste assets). |
@@ -27,9 +27,9 @@ writing**. This file is that document — complete and sign it before the jury r
 
 | Item | Detail |
 |------|--------|
-| Method | Irreversible **pixelation** (block averaging) over PII regions |
+| Method | Irreversible **pixelation** (block averaging) over PII regions; whole-frame fallback when HF token absent |
 | Applied before | Inference, persistence, and transmission (in-memory, before any write) |
-| Tool / model used | `backend/internal/shared/imaging` (Go stdlib), CLI `backend/cmd/anonymize`; PII classes blocked deterministically by the privacy guard |
+| Tool / model used | `backend/internal/shared/imaging`, HF DETR-based PII detector when `HF_API_TOKEN` set; privacy guard blocks person/vehicle classes in output |
 | Reversible? | **No** (irreversible) |
 | Verification | Visual proof in `eval/redaction/street_people_blurred.png` (pedestrian + vehicle pixelated); unit tests assert region-only, averaged (non-recoverable) output. MVP runtime stores no raw image (`raw_image_stored=false`). |
 
@@ -45,10 +45,10 @@ writing**. This file is that document — complete and sign it before the jury r
 
 ## 5. Security checklist
 
-- [ ] No raw imagery committed to git (history checked).
-- [ ] No `.env` files, API keys, or credentials in the repo.
-- [ ] Raw data was never uploaded to unencrypted cloud storage or a public repo.
-- [ ] API responses contain no raw image URLs or unredacted base64.
+- [x] No raw imagery committed to git (history checked).
+- [x] No `.env` files, API keys, or credentials in the repo.
+- [x] Raw data was never uploaded to unencrypted cloud storage or a public repo.
+- [x] API responses contain no raw image URLs or unredacted base64.
 
 ## 6. Sign-off
 

@@ -31,7 +31,8 @@ Open three terminal tabs:
 ```bash
 # Tab 1 — Backend
 cd backend
-go run main.go
+# Optional: cp .env.example .env and set HF_API_TOKEN for live HF + PII detector
+go run .
 # Expected: "backend listening on :8080"
 
 # Tab 2 — Web
@@ -69,17 +70,24 @@ If the response is not `{"status":"ok"}`, do not proceed to demo.
 - [ ] Mobile app starts (Expo DevTools open, QR visible)
 - [ ] No `.env` files committed (`git status` shows clean)
 - [ ] No raw images or PII in the diff
-- [ ] Core feature flow works end-to-end (fill in when challenge is confirmed)
+- [ ] Core Wave 2 flow: report → operator review → field task → manager close
 
-## When the official challenge is announced
+## 3-minute jury script (CivicLens Wave 2)
 
-Update this file with:
+| Time | Who | Action | Fallback |
+|------|-----|--------|----------|
+| 0:00–0:30 | Web — **Vatandaş** | Foto + açıklama ile bildirim gönder | Önceden gönderilmiş report ID |
+| 0:30–0:55 | Web — **Operatör** | Kuyruktan kabul et → görev oluşur | `POST /reports/{id}/review` curl |
+| 0:55–1:25 | Web/Mobile — **Saha** | Görevi başlat + kanıt foto yükle | Mobile FieldStaffView |
+| 1:25–1:45 | Web — **Yönetici** | AI doğrulanmış görevi kapat + analitik | ManagerView Kapat |
+| 1:45–2:30 | Web — **AI Analiz** | Demo sahne (trafik / yol hasarı) + KVKK panel | `GET /vision/demo-results` |
+| 2:30–3:00 | Slides | Kamu yararı + KVKK (`docs/KVKK-COMPLIANCE.md`) | — |
 
-1. The specific demo flow (user journey, step by step)
-2. Any required environment variables beyond defaults
-3. Sample data or mock payloads to demonstrate the feature
-4. Expected AI model output format (if applicable)
-5. Fallback if live AI inference is slow (pre-recorded or cached response)
+**Env (optional):** `HF_API_TOKEN` in `backend/.env` enables live HF + region blur; without it, whole-frame blur still runs on uploads.
+
+**Reproducible AI fallback:** `POST /api/v1/vision/analyze?source_ref=sample_street_traffic` and `sample_road_damage&mode=road_damage` return identical precomputed JSON every time.
+
+**Street View (optional):** `POST /api/v1/vision/analyze?source_ref=streetview&lat=41.0082&lng=28.9784` when `GOOGLE_STREET_VIEW_API_KEY` is set.
 
 ## Final demo checklist (pre-presentation)
 

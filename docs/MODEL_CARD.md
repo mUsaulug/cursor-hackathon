@@ -45,10 +45,12 @@ and only rewrites the summary prose; it never changes a KVKK or priority outcome
 - Detection targets are **inanimate urban objects only**.
 - `person`, `bicycle`, `motorcycle` are **blocked** (removed + counted).
 - `car`, `truck`, `bus` are **hidden** by default (tracking/plate risk).
-- MVP strategy is **avoidance-by-design** (`pii_strategy=avoidance_by_design`):
-  no raw image is stored (`raw_image_stored=false`).
-- When Street View imagery is enabled, faces/plates are **irreversibly pixelated
-  before inference** (`pii_strategy=blur_applied`) via `internal/shared/imaging`.
+- **Precomputed / sample paths** use **avoidance-by-design**
+  (`pii_strategy=avoidance_by_design`) — synthetic scenes with no real PII.
+- **Citizen/staff uploads and Street View** use **blur-before-inference**
+  (`pii_strategy=blur_applied`): HF PII detector when `HF_API_TOKEN` is set,
+  otherwise whole-frame pixelation fallback. Raw images are never stored
+  (`raw_image_stored=false`).
 
 ## Intended use & out-of-scope
 

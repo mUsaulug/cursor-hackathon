@@ -24,6 +24,8 @@ Short log of significant decisions made during the hackathon. Update as you go.
 | Wave 2 | KVKK becomes active blur-before-inference (not avoidance-by-design) | Citizen/staff photos are real PII (faces/plates) | Mandatory ingest anonymizer; raw never persisted; `pii_strategy=blur_applied` | Team |
 | Wave 2 | Defer Postgres/Redis/Kafka adapters to a product step; keep in-memory behind ports | Need running services + non-stdlib deps; not available in the hackathon env | Demo runs in-memory; swap is cheap since ports already exist | Team |
 | Wave 2 | RBAC via X-Role header now, JWT/masterfabric-go later; add audit trail | masterfabric-go repo not delivered; accountability still required | 4 roles enforced at handlers; every mutating request audited (KVKK) | Team |
+| Post-review | HF detector when token present; whole-frame blur fallback without token; vision upload anonymized | REVIEW-FINDINGS C1/C2; never noop on real photos | KVKK-safe offline demo + honest privacy metadata | Team |
+| Post-review | Align Vercel + EAS to same Render URL (`civiclens-backend-1rkq`) | Deploy mismatch caused 404 on mobile preview | Consistent prod data across web/mobile | Team |
 
 ## How to use this log
 
