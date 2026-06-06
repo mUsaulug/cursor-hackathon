@@ -1,0 +1,55 @@
+# CivicLens Öncelik Faktörleri
+# Bildirim önceliğini deterministik olarak hesaplayan çok faktörlü kural dosyası.
+# Karar zincirinde LLM kullanılmaz; bu dosya değiştirilerek davranış güncellenir.
+#
+# Nihai skor = tip_temel_skoru + sikayet_bonusu + konum_riski_bonusu
+# Eşikler: critical (>=90) | high (>=60) | medium (>=30) | low (<30)
+#
+# DURUM: Wave 2 roadmap referansi. Su an intake oncelik, baskin tespitin
+# priority degerinden gelir (deterministik). Bu cok-faktorlu skor henuz koda
+# baglanmadi; backend embed edildiginde priority engine bunu kullanacak.
+version: "1.0"
+
+# Faktör 1: Problem tipi temel skoru (0-70 aralığı).
+# Nesne tipinin doğasından gelen temel ciddiyet ve trafik/güvenlik etkisini yansıtır.
+type_base_score:
+  road_damage:      60  # Yüksek güvenlik riski; araç/yaya akışını doğrudan etkiler
+  traffic_signal:   50  # Sinyal arızaları kaza yaratır; yüksek temel skor
+  sidewalk:         40  # Yaya güvenliği; araç geçişine etkisi daha düşük
+  waste_asset:      25  # Halk sağlığı sorunu; anlık tehlike görece düşük
+  street_furniture: 20  # Yaşam kalitesi; nadiren hayati tehlike oluşturur
+  unknown:          10  # Sınıflandırılamayan; ihtiyatlı taban skor
+
+default_type_score: 10  # Yukarıda listelenmeyen tipler için geri dönüş değeri
+
+# Faktör 2: Şikayet sayısı bonusu (her duplicate_count artışı için).
+# Her ek şikayet, daha geniş bir kamu etkisine işaret eder.
+complaint_bonus_per_count: 5
+complaint_bonus_cap: 20  # Maksimum 20 puan (4+ şikayet aynı etkiyi verir)
+
+# Faktör 3: Konum riski bonusu.
+# Bildirim hassas bir altyapı noktasına yakınsa uygulanır.
+# Birden fazla bonus toplanır (örn. near_school + near_main_road = +25).
+location_risk_bonus:
+  near_school:    15  # Çocukların bulunduğu alan; özen yükümlülüğü yüksek
+  near_hospital:  15  # Acil erişim yolu; tıkanmamalı
+  near_main_road: 10  # Yoğun araç trafiği tehlikeyi büyütür
+  near_bus_stop:   5  # Toplu taşıma kullanıcıları, engelli bireyler dahil
+
+# Nihai skor → öncelik etiketi eşikleri.
+# Değerlendirme sırası: önce critical, sonra high, sonra medium; aksi hâlde low.
+thresholds:
+  critical: 90
+  high:     60
+  medium:   30
+  # low: varsayılan — skor < 30
+
+# ---------------------------------------------------------------------------
+# Çalışma örnekleri (referans ve birim-test verisi olarak kullanılabilir)
+# ---------------------------------------------------------------------------
+# road_damage (60) + 3 şikayet (15) + near_hospital (15) = 90 → critical
+# road_damage (60) + 0 şikayet  (0) + yok           (0) = 60 → high
+# traffic_signal (50) + 2 şikayet (10)                   = 60 → high
+# sidewalk (40)       + 1 şikayet  (5)                   = 45 → medium
+# street_furniture (20) + 0 şikayet                      = 20 → low
+# unknown (10)          + 0 şikayet                      = 10 → low
