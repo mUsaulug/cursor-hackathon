@@ -1,16 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"cursor-hackathon/backend/internal/app"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", healthHandler)
+	mux := app.NewMux()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -21,16 +21,6 @@ func main() {
 	if err := http.ListenAndServe(":"+port, corsMiddleware(mux)); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func healthHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

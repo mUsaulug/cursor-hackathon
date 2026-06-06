@@ -1,0 +1,79 @@
+// Package app wires the CivicLens vision bounded context: it loads rules, builds
+// the pipeline, registers inference adapters into the model router, and exposes
+// an http.ServeMux with the vision routes plus health endpoints. main.go keeps
+// only process concerns (CORS, listen). This mirrors how the masterfabric-go
+// composition root would assemble a bounded context.
+package app
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+
+	appvision "cursor-hackathon/backend/internal/application/vision"
+	domain "cursor-hackathon/backend/internal/domain/vision"
+	"cursor-hackathon/backend/internal/infrastructure/demo"
+	visionhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/vision"
+	"cursor-hackathon/backend/internal/infrastructure/huggingface"
+	"cursor-hackathon/backend/internal/infrastructure/openrouter"
+	"cursor-hackathon/backend/internal/infrastructure/store"
+	"cursor-hackathon/backend/internal/shared/config"
+)
+
+// NewMux builds the fully wired ServeMux (vision API + health).
+func NewMux() *http.ServeMux {
+	rules := config.MustLoad()
+	pipeline := appvision.NewPipeline(rules)
+
+	precomputed := demo.NewPrecomputedAdapter()
+	roadDamage := demo.NewRoadDamageAdapter()
+
+	router := appvision.NewRouter(precomputed)
+	router.Register(domain.ModelModePrecomputed, precomputed)
+	router.Register(domain.ModelModeRoadDamage, roadDamage)
+
+	models := []visionhttp.ModelDescriptor{
+		{ModelID: "civiclens/precomputed-detr-rdd", Mode: domain.ModelModePrecomputed, Role: "Reliable offline demo path", Live: false},
+		{ModelID: demo.RoadDamageModelID, Mode: domain.ModelModeRoadDamage, Role: "Road damage (RDD2022) precomputed hero", Live: false},
+	}
+
+	// Live HF DETR is opt-in via token (graceful absence; design doc 12).
+	if token := os.Getenv("HF_API_TOKEN"); token != "" {
+		client := huggingface.NewClient(token, huggingface.WithBaseURL(os.Getenv("HF_INFERENCE_BASE_URL")))
+		router.Register(domain.ModelModeLiveHF, huggingface.NewDETRAdapter(client))
+		models = append(models, visionhttp.ModelDescriptor{
+			ModelID: huggingface.DETRModelID, Mode: domain.ModelModeLiveHF, Role: "Live COCO baseline", Live: true,
+		})
+		log.Println("app: live HF DETR adapter registered")
+	} else {
+		log.Println("app: HF_API_TOKEN absent — precomputed-first, live HF disabled")
+	}
+
+	st := store.NewInMemory(200)
+	reasoner := openrouter.NewLocalReasoner()
+	uc := appvision.NewAnalyzeImageUseCase(router, pipeline, st)
+
+	handler := visionhttp.NewHandler(visionhttp.Deps{
+		Analyze:  uc,
+		Store:    st,
+		Reasoner: reasoner,
+		Models:   models,
+		Modes:    router.Modes(),
+	})
+
+	mux := http.NewServeMux()
+	handler.Register(mux)
+	registerHealth(mux)
+	return mux
+}
+
+func registerHealth(mux *http.ServeMux) {
+	ok := func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+	}
+	mux.HandleFunc("GET /health", ok)
+	mux.HandleFunc("GET /health/live", ok)
+	mux.HandleFunc("GET /health/ready", ok)
+}
