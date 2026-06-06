@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+web/.next/
+mobile/.expo/
+mobile/dist/
+
+# Go
+backend/bin/
+backend/*.exe
+backend/*.test
+*.out
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Raw / private data (KVKK — never commit)
+data/raw/
+uploads/raw/
+private/
+**/data/raw/
+**/uploads/raw/
+
+# OS & editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+!.vscode/extensions.json
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.tmp/
+temp/
+
+# Test / coverage
+coverage/
+*.coverprofile

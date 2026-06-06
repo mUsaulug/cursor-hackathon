@@ -1,0 +1,41 @@
+# Secrets & environment — full block (AI cannot access)
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Raw / private data (KVKK — never access)
+data/raw/
+uploads/raw/
+private/
+**/data/raw/
+**/uploads/raw/
+
+# Dependencies — no value, slows Cursor significantly
+node_modules/
+web/node_modules/
+mobile/node_modules/
+backend/vendor/
+
+# Build outputs — generated, not source
+.next/
+web/.next/
+web/.vercel/
+mobile/.expo/dist/
+dist/
+build/
+out/
+backend/bin/
+backend/*.exe
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db

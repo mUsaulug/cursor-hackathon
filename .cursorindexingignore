@@ -1,0 +1,30 @@
+# Excluded from @Codebase semantic search (AI can still read if @-mentioned directly)
+
+# Lock files — large, low signal
+package-lock.json
+web/package-lock.json
+mobile/package-lock.json
+
+# Expo cache & metadata
+mobile/.expo/
+mobile/.expo/dev/
+mobile/.expo/devices.json
+
+# Next.js cache
+web/.next/
+
+# Test coverage reports
+coverage/
+**/coverage/
+
+# Go test artifacts
+*.out
+*.test
+backend/*.coverprofile
+
+# Generated type declarations
+web/next-env.d.ts
+
+# Static public assets (SVGs, icons) — not useful for code search
+web/public/
+mobile/assets/
