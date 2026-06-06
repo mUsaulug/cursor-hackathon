@@ -51,7 +51,16 @@ func NewMux() *http.ServeMux {
 	}
 
 	st := store.NewInMemory(200)
-	reasoner := openrouter.NewLocalReasoner()
+
+	// Reasoner is optional prose-only. With an OpenRouter key we rewrite the
+	// summary via LLM but keep all decisions deterministic; otherwise the local
+	// template reasoner is used (graceful degradation; design doc 8).
+	var reasoner appvision.ReasonerPort = openrouter.NewLocalReasoner()
+	if key := os.Getenv("OPENROUTER_API_KEY"); key != "" {
+		reasoner = openrouter.NewReasoner(key, os.Getenv("OPENROUTER_MODEL"), openrouter.NewLocalReasoner())
+		log.Println("app: OpenRouter reasoner enabled (prose only)")
+	}
+
 	uc := appvision.NewAnalyzeImageUseCase(router, pipeline, st)
 
 	handler := visionhttp.NewHandler(visionhttp.Deps{
