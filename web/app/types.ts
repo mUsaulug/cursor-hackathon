@@ -107,6 +107,18 @@ export type Task = {
   updated_at: string;
 };
 
+export type Evidence = {
+  evidence_id: string;
+  task_id: string;
+  before_analysis_id: string;
+  after_analysis_id: string;
+  image_ref: string;
+  ai_verification: string;
+  manager_approval: string;
+  uploaded_by: string;
+  created_at: string;
+};
+
 export type AnalyticsSummary = {
   total_reports: number;
   reports_by_status: Record<string, number>;

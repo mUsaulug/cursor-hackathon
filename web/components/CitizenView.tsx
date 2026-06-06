@@ -59,9 +59,12 @@ export default function CitizenView({
     );
   }, []);
 
-  // Ask for location on mount; the user can retry with the button.
+  // Ask for location on mount (deferred); the user can retry with the button.
   useEffect(() => {
-    requestLocation();
+    const timer = window.setTimeout(() => {
+      requestLocation();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [requestLocation]);
 
   const handleImageChange = useCallback(

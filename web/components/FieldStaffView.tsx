@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import type { Task, UserRole } from "@/app/types";
+import type { Evidence, Task, UserRole } from "@/app/types";
 import TaskCard from "./TaskCard";
+
+const ASSIGNED_TO = "saha_ekip_1";
 
 type FieldStaffViewProps = {
   role: UserRole;
@@ -13,12 +15,20 @@ export default function FieldStaffView({ role }: FieldStaffViewProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
+  const [lastEvidence, setLastEvidence] = useState<Evidence | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingEvidenceTaskId = useRef<string | null>(null);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch("/api/v1/tasks", role, { cache: "no-store" });
+      const res = await apiFetch(
+        `/api/v1/tasks?assigned_to=${ASSIGNED_TO}`,
+        role,
+        { cache: "no-store" },
+      );
       if (!res.ok) {
         throw new Error(`Görevler alınamadı (${res.status})`);
       }
@@ -38,13 +48,80 @@ export default function FieldStaffView({ role }: FieldStaffViewProps) {
     return () => window.clearTimeout(timer);
   }, [fetchTasks]);
 
+  const handleStart = useCallback(
+    async (taskId: string) => {
+      setBusyTaskId(taskId);
+      setError(null);
+      try {
+        const res = await apiFetch(`/api/v1/tasks/${taskId}/start`, role, {
+          method: "POST",
+        });
+        if (!res.ok) {
+          throw new Error(`Görev başlatılamadı (${res.status})`);
+        }
+        await fetchTasks();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Bilinmeyen hata");
+      } finally {
+        setBusyTaskId(null);
+      }
+    },
+    [fetchTasks, role],
+  );
+
+  const handleEvidencePick = useCallback((taskId: string) => {
+    pendingEvidenceTaskId.current = taskId;
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleEvidenceFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      const taskId = pendingEvidenceTaskId.current;
+      e.target.value = "";
+      if (!file || !taskId) return;
+
+      setBusyTaskId(taskId);
+      setError(null);
+      try {
+        const body = new FormData();
+        body.append("image", file);
+        const res = await apiFetch(`/api/v1/tasks/${taskId}/evidence`, role, {
+          method: "POST",
+          body,
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Kanıt yüklenemedi (${res.status})`);
+        }
+        const ev: Evidence = await res.json();
+        setLastEvidence(ev);
+        await fetchTasks();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Bilinmeyen hata");
+      } finally {
+        setBusyTaskId(null);
+        pendingEvidenceTaskId.current = null;
+      }
+    },
+    [fetchTasks, role],
+  );
+
   return (
     <div className="space-y-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => void handleEvidenceFile(e)}
+      />
+
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Saha Görevleri</h2>
           <p className="mt-1 text-sm text-slate-600">
-            Size atanan saha görevlerini görüntüleyin.
+            Atanan görevleri başlatın ve tamamlama kanıtı yükleyin.
           </p>
         </div>
         <button
@@ -76,7 +153,33 @@ export default function FieldStaffView({ role }: FieldStaffViewProps) {
       {tasks.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {tasks.map((task) => (
-            <TaskCard key={task.task_id} task={task} />
+            <TaskCard key={task.task_id} task={task}>
+              {task.status === "assigned" ? (
+                <button
+                  type="button"
+                  disabled={busyTaskId === task.task_id}
+                  onClick={() => void handleStart(task.task_id)}
+                  className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  Başlat
+                </button>
+              ) : null}
+              {task.status === "started" ? (
+                <button
+                  type="button"
+                  disabled={busyTaskId === task.task_id}
+                  onClick={() => handleEvidencePick(task.task_id)}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  Kanıt Yükle
+                </button>
+              ) : null}
+              {lastEvidence?.task_id === task.task_id ? (
+                <span className="text-xs text-emerald-700">
+                  Kanıt yüklendi — {lastEvidence.ai_verification}
+                </span>
+              ) : null}
+            </TaskCard>
           ))}
         </div>
       ) : null}

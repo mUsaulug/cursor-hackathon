@@ -1,9 +1,15 @@
 import type { Task } from "@/app/types";
 import { formatDate, PriorityBadge, StatusBadge } from "./badges";
 
-export default function TaskCard({ task }: { task: Task }) {
+export default function TaskCard({
+  task,
+  children,
+}: {
+  task: Task;
+  children?: React.ReactNode;
+}) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <span className="font-mono text-xs text-slate-400">{task.task_id}</span>
@@ -38,6 +44,11 @@ export default function TaskCard({ task }: { task: Task }) {
           <dd className="font-medium text-slate-700">{formatDate(task.updated_at)}</dd>
         </div>
       </dl>
+      {children ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+          {children}
+        </div>
+      ) : null}
     </article>
   );
 }

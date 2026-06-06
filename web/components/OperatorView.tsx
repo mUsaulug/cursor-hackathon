@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import type { Report, ReviewResponse, UserRole } from "@/app/types";
+import type { Report, ReviewResponse, Task, UserRole } from "@/app/types";
 import ReportCard from "./ReportCard";
 import TaskCard from "./TaskCard";
 
@@ -63,8 +63,17 @@ export default function OperatorView({ role }: OperatorViewProps) {
           throw new Error(text || `İnceleme başarısız (${res.status})`);
         }
 
-        const result: ReviewResponse = await res.json();
-        setLastReview(result);
+        const data = await res.json();
+        if (decision === "accepted") {
+          setLastReview({
+            report:
+              reports.find((r) => r.report_id === reportId) ??
+              ({ report_id: reportId } as Report),
+            task: data as Task,
+          });
+        } else {
+          setLastReview({ report: data as Report });
+        }
         await fetchReports();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Bilinmeyen hata");
@@ -72,7 +81,7 @@ export default function OperatorView({ role }: OperatorViewProps) {
         setReviewingId(null);
       }
     },
-    [fetchReports, role],
+    [fetchReports, reports, role],
   );
 
   return (

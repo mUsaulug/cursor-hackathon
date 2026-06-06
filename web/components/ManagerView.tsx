@@ -63,6 +63,8 @@ export default function ManagerView({ role }: ManagerViewProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const [auditLines, setAuditLines] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -80,16 +82,57 @@ export default function ManagerView({ role }: ManagerViewProps) {
         throw new Error(`Görevler alınamadı (${tasksRes.status})`);
       }
 
+      const auditRes = await apiFetch("/api/v1/audit", role, {
+        cache: "no-store",
+      });
       const summaryData: AnalyticsSummary = await summaryRes.json();
       const tasksData: Task[] = await tasksRes.json();
       setSummary(summaryData);
       setTasks(tasksData);
+      if (auditRes.ok) {
+        const audit = (await auditRes.json()) as Array<{
+          method: string;
+          path: string;
+          actor_role: string;
+          status: number;
+          at: string;
+        }>;
+        setAuditLines(
+          audit.slice(-8).map(
+            (e) =>
+              `${e.at} ${e.actor_role} ${e.method} ${e.path} → ${e.status}`,
+          ),
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bilinmeyen hata");
     } finally {
       setLoading(false);
     }
   }, [role]);
+
+  const handleClose = useCallback(
+    async (taskId: string) => {
+      setClosingId(taskId);
+      setError(null);
+      try {
+        const res = await apiFetch(`/api/v1/tasks/${taskId}/close`, role, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ decision: "approved" }),
+        });
+        if (!res.ok) {
+          throw new Error(`Görev kapatılamadı (${res.status})`);
+        }
+        await fetchData();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Bilinmeyen hata");
+      } finally {
+        setClosingId(null);
+      }
+    },
+    [fetchData, role],
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -180,11 +223,36 @@ export default function ManagerView({ role }: ManagerViewProps) {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {tasks.map((task) => (
-              <TaskCard key={task.task_id} task={task} />
+              <TaskCard key={task.task_id} task={task}>
+                {task.status === "ai_verified" ||
+                task.status === "evidence_uploaded" ? (
+                  <button
+                    type="button"
+                    disabled={closingId === task.task_id}
+                    onClick={() => void handleClose(task.task_id)}
+                    className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    Kapat
+                  </button>
+                ) : null}
+              </TaskCard>
             ))}
           </div>
         )}
       </section>
+
+      {auditLines.length > 0 ? (
+        <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 text-base font-semibold text-slate-900">
+            Denetim günlüğü (son kayıtlar)
+          </h3>
+          <ul className="space-y-1 font-mono text-xs text-slate-600">
+            {auditLines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

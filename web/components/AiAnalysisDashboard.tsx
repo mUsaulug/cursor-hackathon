@@ -25,15 +25,22 @@ type DemoScene = {
   mode?: string;
 };
 
+// Neutral placeholder — demo scenes load analysis via API (no static assets in repo).
+const DEMO_PLACEHOLDER =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="864" viewBox="0 0 1152 864"><rect fill="#e2e8f0" width="1152" height="864"/><text x="576" y="432" text-anchor="middle" fill="#64748b" font-family="sans-serif" font-size="24">Demo sahne — API analizi</text></svg>',
+  );
+
 const DEMO_SCENES: DemoScene[] = [
   {
     label: "Trafik sahnesi",
-    imagePath: "/samples/street_traffic_01.webp",
+    imagePath: DEMO_PLACEHOLDER,
     sourceRef: "sample_street_traffic",
   },
   {
     label: "Yol hasarı",
-    imagePath: "/samples/road_pothole_01.webp",
+    imagePath: DEMO_PLACEHOLDER,
     sourceRef: "sample_road_damage",
     mode: "road_damage",
   },
