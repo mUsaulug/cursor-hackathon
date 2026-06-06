@@ -1,0 +1,5 @@
+[
+  { "label": "D40", "score": 0.88, "box": { "xmin": 220, "ymin": 360, "xmax": 430, "ymax": 470 }, "model_id": "rezzzq/yolo12s-road-damage-rdd2022" },
+  { "label": "D40", "score": 0.72, "box": { "xmin": 70, "ymin": 408, "xmax": 168, "ymax": 462 }, "model_id": "rezzzq/yolo12s-road-damage-rdd2022" },
+  { "label": "D00", "score": 0.69, "box": { "xmin": 300, "ymin": 250, "xmax": 360, "ymax": 470 }, "model_id": "rezzzq/yolo12s-road-damage-rdd2022" }
+]
