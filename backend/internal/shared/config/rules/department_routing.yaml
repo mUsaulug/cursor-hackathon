@@ -1,0 +1,13 @@
+# CivicLens Department Routing (runtime canonical copy; embedded at build).
+# Human-facing copy in docs/rules/department_routing.yaml is kept in sync.
+version: "1.0"
+
+routing:
+  road_damage: "Fen Isleri Mudurlugu"
+  traffic_signal: "Ulasim Hizmetleri Mudurlugu"
+  sidewalk: "Fen Isleri Mudurlugu"
+  street_furniture: "Park ve Bahceler Mudurlugu"
+  waste_asset: "Temizlik Isleri Mudurlugu"
+  unknown: "Genel Degerlendirme"
+
+default_department: "Genel Degerlendirme"

@@ -6,14 +6,18 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 
+	intake "cursor-hackathon/backend/internal/application/intake"
 	appvision "cursor-hackathon/backend/internal/application/vision"
 	domain "cursor-hackathon/backend/internal/domain/vision"
+	"cursor-hackathon/backend/internal/infrastructure/anonymizer"
 	"cursor-hackathon/backend/internal/infrastructure/demo"
+	reporthttp "cursor-hackathon/backend/internal/infrastructure/http/handler/report"
 	visionhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/vision"
 	"cursor-hackathon/backend/internal/infrastructure/huggingface"
 	"cursor-hackathon/backend/internal/infrastructure/openrouter"
@@ -39,9 +43,11 @@ func NewMux() *http.ServeMux {
 	}
 
 	// Live HF DETR is opt-in via token (graceful absence; design doc 12).
+	var detr *huggingface.DETRAdapter
 	if token := os.Getenv("HF_API_TOKEN"); token != "" {
 		client := huggingface.NewClient(token, huggingface.WithBaseURL(os.Getenv("HF_INFERENCE_BASE_URL")))
-		router.Register(domain.ModelModeLiveHF, huggingface.NewDETRAdapter(client))
+		detr = huggingface.NewDETRAdapter(client)
+		router.Register(domain.ModelModeLiveHF, detr)
 		models = append(models, visionhttp.ModelDescriptor{
 			ModelID: huggingface.DETRModelID, Mode: domain.ModelModeLiveHF, Role: "Live COCO baseline", Live: true,
 		})
@@ -71,10 +77,41 @@ func NewMux() *http.ServeMux {
 		Modes:    router.Modes(),
 	})
 
+	// Wave 2 intake: KVKK anonymizer (HF detector if a token is present, else
+	// no-op for synthetic/demo) -> vision -> dedup/route -> report store.
+	var anon *anonymizer.Anonymizer
+	if detr != nil {
+		anon = anonymizer.New(anonymizer.NewHFDetector(detr), domain.PIIStrategyBlurApplied)
+	} else {
+		anon = anonymizer.New(anonymizer.NewNoopDetector(), domain.PIIStrategyAvoidanceByDesign)
+	}
+	reportStore := store.NewReportInMemory()
+	intakeUC := intake.NewCreateReportUseCase(anonymizerAdapter{anon}, uc, reportStore, rules)
+	reportHandler := reporthttp.NewHandler(intakeUC, reportStore)
+
 	mux := http.NewServeMux()
 	handler.Register(mux)
+	reportHandler.Register(mux)
 	registerHealth(mux)
 	return mux
+}
+
+// anonymizerAdapter adapts the infrastructure anonymizer to the intake port.
+type anonymizerAdapter struct{ inner *anonymizer.Anonymizer }
+
+func (a anonymizerAdapter) Anonymize(ctx context.Context, img []byte) (intake.AnonymizationResult, error) {
+	r, err := a.inner.Anonymize(ctx, img)
+	if err != nil {
+		return intake.AnonymizationResult{}, err
+	}
+	return intake.AnonymizationResult{
+		Image:          r.Image,
+		Width:          r.Width,
+		Height:         r.Height,
+		RegionsBlurred: r.RegionsBlurred,
+		Strategy:       r.Strategy,
+		Anonymized:     r.Anonymized,
+	}, nil
 }
 
 func registerHealth(mux *http.ServeMux) {

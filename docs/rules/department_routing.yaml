@@ -1,0 +1,14 @@
+# CivicLens Department Routing
+# Maps a normalized urban object type to the responsible municipal department.
+# Rule-based (no LLM); change routing here, not code. Used by the intake use case.
+version: "1.0"
+
+routing:
+  road_damage: "Fen Isleri Mudurlugu"
+  traffic_signal: "Ulasim Hizmetleri Mudurlugu"
+  sidewalk: "Fen Isleri Mudurlugu"
+  street_furniture: "Park ve Bahceler Mudurlugu"
+  waste_asset: "Temizlik Isleri Mudurlugu"
+  unknown: "Genel Degerlendirme"
+
+default_department: "Genel Degerlendirme"

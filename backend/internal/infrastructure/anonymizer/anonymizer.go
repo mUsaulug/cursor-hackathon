@@ -22,6 +22,8 @@ type Detector interface {
 // Result is the outcome of anonymization.
 type Result struct {
 	Image          []byte // anonymized JPEG (raw input must be discarded)
+	Width          int
+	Height         int
 	RegionsBlurred int
 	Strategy       string // domain.PIIStrategyBlurApplied | PIIStrategyAvoidanceByDesign
 	Anonymized     bool
@@ -51,6 +53,7 @@ func (a *Anonymizer) Anonymize(ctx context.Context, img []byte) (Result, error) 
 	if err != nil {
 		return Result{}, err
 	}
+	w, h := src.Bounds().Dx(), src.Bounds().Dy()
 
 	var regions []image.Rectangle
 	if a.detector != nil {
@@ -68,7 +71,7 @@ func (a *Anonymizer) Anonymize(ctx context.Context, img []byte) (Result, error) 
 		if encErr != nil {
 			return Result{}, encErr
 		}
-		return Result{Image: out, RegionsBlurred: 0, Strategy: a.strategy, Anonymized: false}, nil
+		return Result{Image: out, Width: w, Height: h, RegionsBlurred: 0, Strategy: a.strategy, Anonymized: false}, nil
 	}
 
 	blurred := imaging.PixelateRegions(src, regions, a.block)
@@ -78,6 +81,8 @@ func (a *Anonymizer) Anonymize(ctx context.Context, img []byte) (Result, error) 
 	}
 	return Result{
 		Image:          out,
+		Width:          w,
+		Height:         h,
 		RegionsBlurred: len(regions),
 		Strategy:       domain.PIIStrategyBlurApplied,
 		Anonymized:     true,

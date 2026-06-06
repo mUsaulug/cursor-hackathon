@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-//go:embed rules/ontology.yaml rules/priority_policy.yaml rules/confidence_thresholds.yaml
+//go:embed rules/ontology.yaml rules/priority_policy.yaml rules/confidence_thresholds.yaml rules/department_routing.yaml
 var rulesFS embed.FS
 
 // Ontology maps raw model labels to normalized urban object types and holds the
@@ -71,11 +71,28 @@ func (c ConfidenceThresholds) AutoAccept(objectType string) float64 {
 	return c.DefaultAutoAccept
 }
 
+// DepartmentRouting maps a normalized object type to a municipal department.
+// Source: rules/department_routing.yaml (Wave 2 intake).
+type DepartmentRouting struct {
+	Version           string
+	ByType            map[string]string
+	DefaultDepartment string
+}
+
+// Department returns the responsible department for a normalized type.
+func (d DepartmentRouting) Department(objectType string) string {
+	if v, ok := d.ByType[objectType]; ok {
+		return v
+	}
+	return d.DefaultDepartment
+}
+
 // Rules bundles all loaded rule sets.
 type Rules struct {
 	Ontology   Ontology
 	Priority   PriorityPolicy
 	Confidence ConfidenceThresholds
+	Routing    DepartmentRouting
 }
 
 // Load reads and parses all embedded rule files. It fails fast: a malformed or
@@ -93,7 +110,11 @@ func Load() (*Rules, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Rules{Ontology: ont, Priority: pri, Confidence: conf}, nil
+	routing, err := loadRouting()
+	if err != nil {
+		return nil, err
+	}
+	return &Rules{Ontology: ont, Priority: pri, Confidence: conf, Routing: routing}, nil
 }
 
 // MustLoad is Load but panics on error. Use at startup wiring.
@@ -189,6 +210,23 @@ func loadConfidence() (ConfidenceThresholds, error) {
 		c.AutoAcceptByType[k] = f
 	}
 	return c, nil
+}
+
+func loadRouting() (DepartmentRouting, error) {
+	doc, err := readRule("department_routing.yaml")
+	if err != nil {
+		return DepartmentRouting{}, err
+	}
+	d := DepartmentRouting{ByType: doc.maps["routing"]}
+	d.Version, _ = doc.scalar("version")
+	d.DefaultDepartment, _ = doc.scalar("default_department")
+	if d.DefaultDepartment == "" {
+		d.DefaultDepartment = "Genel Degerlendirme"
+	}
+	if d.ByType == nil {
+		d.ByType = map[string]string{}
+	}
+	return d, nil
 }
 
 func toSet(items []string) map[string]bool {
