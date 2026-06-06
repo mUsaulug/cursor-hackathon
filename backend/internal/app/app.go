@@ -17,6 +17,7 @@ import (
 	tasking "cursor-hackathon/backend/internal/application/tasking"
 	verification "cursor-hackathon/backend/internal/application/verification"
 	appvision "cursor-hackathon/backend/internal/application/vision"
+	identity "cursor-hackathon/backend/internal/domain/identity"
 	domain "cursor-hackathon/backend/internal/domain/vision"
 	"cursor-hackathon/backend/internal/infrastructure/anonymizer"
 	"cursor-hackathon/backend/internal/infrastructure/demo"
@@ -25,14 +26,16 @@ import (
 	taskhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/task"
 	verificationhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/verification"
 	visionhttp "cursor-hackathon/backend/internal/infrastructure/http/handler/vision"
+	"cursor-hackathon/backend/internal/infrastructure/http/middleware"
 	"cursor-hackathon/backend/internal/infrastructure/huggingface"
 	"cursor-hackathon/backend/internal/infrastructure/openrouter"
 	"cursor-hackathon/backend/internal/infrastructure/store"
 	"cursor-hackathon/backend/internal/shared/config"
 )
 
-// NewMux builds the fully wired ServeMux (vision API + health).
-func NewMux() *http.ServeMux {
+// NewMux builds the fully wired HTTP handler (vision + Wave 2 ops APIs + health),
+// wrapped with audit middleware that records every mutating request.
+func NewMux() http.Handler {
 	rules := config.MustLoad()
 	pipeline := appvision.NewPipeline(rules)
 
@@ -111,14 +114,35 @@ func NewMux() *http.ServeMux {
 	analyticsSvc := analytics.NewService(reportStore, taskStore)
 	analyticsHandler := analyticshttp.NewHandler(analyticsSvc)
 
+	// Wave 2 audit trail: every mutating request is recorded for KVKK
+	// accountability; managers can read the log.
+	auditStore := store.NewAuditInMemory(1000)
+
 	mux := http.NewServeMux()
 	handler.Register(mux)
 	reportHandler.Register(mux)
 	taskHandler.Register(mux)
 	verificationHandler.Register(mux)
 	analyticsHandler.Register(mux)
+	registerAudit(mux, auditStore)
 	registerHealth(mux)
-	return mux
+
+	return middleware.Audit(auditStore)(mux)
+}
+
+// registerAudit exposes the audit log to managers.
+func registerAudit(mux *http.ServeMux, auditStore *store.AuditInMemory) {
+	mux.HandleFunc("GET /api/v1/audit", func(w http.ResponseWriter, r *http.Request) {
+		role := r.Header.Get("X-Role")
+		if identity.Role(role) != identity.RoleManager {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "manager role required"})
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(auditStore.List(r.Context()))
+	})
 }
 
 // anonymizerAdapter adapts the infrastructure anonymizer to the intake port.
