@@ -18,8 +18,8 @@ import (
 const (
 	maxUploadBytes  = 12 << 20 // 12 MiB cap on uploaded image
 	defaultImageDim = 0
-	sampleWidth     = 640 // fixtures are authored against a 640x480 canvas
-	sampleHeight    = 480
+	sampleWidth     = 1152 // matches the synthetic sample images in eval/sample_images
+	sampleHeight    = 864
 )
 
 // parseAnalyzeRequest builds an AnalyzeCommand from a multipart upload or a JSON

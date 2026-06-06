@@ -1,7 +1,7 @@
 [
-  { "label": "traffic light", "score": 0.94, "box": { "xmin": 412, "ymin": 60, "xmax": 470, "ymax": 196 }, "model_id": "facebook/detr-resnet-50" },
-  { "label": "bench", "score": 0.81, "box": { "xmin": 96, "ymin": 300, "xmax": 268, "ymax": 392 }, "model_id": "facebook/detr-resnet-50" },
-  { "label": "potted plant", "score": 0.66, "box": { "xmin": 286, "ymin": 286, "xmax": 344, "ymax": 372 }, "model_id": "facebook/detr-resnet-50" },
-  { "label": "person", "score": 0.97, "box": { "xmin": 520, "ymin": 210, "xmax": 596, "ymax": 430 }, "model_id": "facebook/detr-resnet-50" },
-  { "label": "car", "score": 0.89, "box": { "xmin": 8, "ymin": 232, "xmax": 150, "ymax": 318 }, "model_id": "facebook/detr-resnet-50" }
+  { "label": "traffic light", "score": 0.94, "box": { "xmin": 360, "ymin": 20, "xmax": 520, "ymax": 430 }, "model_id": "facebook/detr-resnet-50" },
+  { "label": "bench", "score": 0.81, "box": { "xmin": 20, "ymin": 545, "xmax": 300, "ymax": 770 }, "model_id": "facebook/detr-resnet-50" },
+  { "label": "potted plant", "score": 0.66, "box": { "xmin": 20, "ymin": 320, "xmax": 270, "ymax": 640 }, "model_id": "facebook/detr-resnet-50" },
+  { "label": "person", "score": 0.97, "box": { "xmin": 960, "ymin": 300, "xmax": 1050, "ymax": 720 }, "model_id": "facebook/detr-resnet-50" },
+  { "label": "car", "score": 0.89, "box": { "xmin": 980, "ymin": 40, "xmax": 1130, "ymax": 150 }, "model_id": "facebook/detr-resnet-50" }
 ]
