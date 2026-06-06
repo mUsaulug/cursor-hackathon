@@ -1,0 +1,55 @@
+---
+description: Cursor modes and features reference — read context before suggesting anything
+alwaysApply: true
+---
+
+# Cursor features reference
+
+This is a reference, not a rulebook. Read the conversation and codebase context first,
+then decide whether a suggestion is actually helpful. Do not suggest a feature just
+because it pattern-matches — only suggest when it would genuinely save time or prevent
+a mistake given what the user is trying to do right now.
+
+## Available modes (cycle with Shift+Tab or Cmd+.)
+
+| Mode | What it does | Typical fit |
+|------|-------------|-------------|
+| **Agent** (default) | Edits files, runs terminal, iterates autonomously | Implementation work with clear requirements |
+| **Ask** | Read-only codebase search, no file changes | Exploring impact, understanding before touching code |
+| **Plan** (`/plan`) | Research → generates editable Markdown plan → then Build | When scope or approach is uncertain |
+| **Debug** | Instruments with runtime logs, finds root cause | Flaky tests, intermittent failures, unexpected behavior |
+| **Manual** | Step-by-step with approval at each action | When you want full control of every edit |
+
+**Inline Edit (`Cmd+K`):** surgical single-location rewrite, no panel needed.
+
+**Plan Mode flow:** `Shift+Tab` → answer clarifying questions → edit the plan → Build.
+Plans save to `.cursor/plans/` — if execution goes wrong, revert and re-plan rather than iterating on a bad run.
+
+## Context commands
+
+| Command | When it helps |
+|---------|--------------|
+| `@Files` | You already know which file is relevant — precise, low noise |
+| `@Codebase` | You don't know where something lives — semantic search across the repo |
+| `@Web` | Need current docs, external API details, anything post-training |
+| `@Branch` / `@Commit` | Reviewing a diff, writing a commit message |
+| `@Terminal` | Debugging an error visible in the terminal |
+| `@Docs` | Indexed library documentation |
+
+## Model switching (mid-session)
+
+- `/model claude-sonnet-4-5` — faster, sufficient for most coding tasks
+- `/model claude-opus-4` — deeper reasoning; worth it when the problem spans all three apps or the approach is genuinely ambiguous
+- `/compress` — when the chat has grown long and responses feel unfocused
+- `/new-chat` + `@Files` — cleaner than compressing; start fresh with only the relevant context
+
+## When to mention a feature
+
+Suggest a mode or command only when it would concretely change the outcome:
+- User is about to write code across multiple files without a plan → mention Plan Mode
+- User pastes a terminal error → suggest `@Terminal` so the agent sees it exactly
+- Conversation is long and agent responses are drifting → suggest `/compress` or new chat
+- User asks about an external library → suggest `@Web` or `@Docs`
+
+Do not interrupt a smooth conversation to remind the user that features exist.
+Do not add feature suggestions as a footer to every response.

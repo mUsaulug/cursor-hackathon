@@ -1,0 +1,18 @@
+---
+description: Go backend rules for backend/ directory
+globs: backend/**/*.go
+alwaysApply: false
+---
+
+# Backend (Go) rules
+
+- **Architecture (mandatory):** the `masterfabric-go` repo structure must be used once delivered. Do not
+  build a custom architecture. Current `main.go` is a temporary `/health` stub — replace it, don't extend it.
+- Standard library only unless a package already exists in `go.mod`
+- Always expose `GET /health` returning `{"status":"ok"}`
+- Default port `8080`; override with `PORT` env var
+- CORS is handled in `main.go` `corsMiddleware` — extend the allowed origins list, do not replace it
+- Run: `cd backend && go run main.go`
+- No raw imagery in request/response bodies — anonymize before persistence (see `docs/PRIVACY.md`)
+- Low-confidence AI outputs: mark as `needs_review`, do not present as facts
+- No external HTTP calls without timeout context

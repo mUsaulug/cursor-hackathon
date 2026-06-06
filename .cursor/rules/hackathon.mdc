@@ -1,0 +1,61 @@
+---
+description: Cursor Hackathon Istanbul — privacy, simplicity, and local demo rules
+globs:
+alwaysApply: true
+---
+
+# Hackathon workspace rules
+
+## Scope
+
+6-hour hackathon. Prefer working demos over perfect architecture.
+The official rule bulletin is the source of truth.
+
+## Mandatory stack (per bulletin)
+
+- `web/` — Next.js → Vercel
+- `mobile/` — Expo
+- `backend/` — Go → Render. **Must follow the `masterfabric-go` architecture** once delivered;
+  do not build a custom backend architecture. Current `main.go` is a temporary health stub.
+- AI models/datasets → **Hugging Face**. External data → **Google Street View API** (key in `.env` only).
+
+No shared packages. No monorepo tooling.
+
+## Process (per bulletin)
+
+- Commit incrementally with meaningful messages — no single bulk upload (disqualification risk).
+- Document Cursor/AI usage in `README.md`; Cursor CLI & SDK use earns bonus points.
+
+## Privacy / KVKK (strict)
+
+- Models target **inanimate urban objects only**. No identity/face recognition, plate reading, or
+  person/vehicle profiling (disqualification).
+- Faces and plates are detected only to anonymize them — blur/pixelate **irreversibly before**
+  training, inference, persistence, or transmission.
+- Do not commit raw images, faces, plates, or `.env` files.
+- Ignore only raw folders (`data/raw/`, `uploads/raw/`, `private/`) — not all images.
+- At event end, delete raw imagery and record it in `docs/KVKK-COMPLIANCE.md` (prize prerequisite).
+- Read `docs/PRIVACY.md` when handling imagery.
+
+## Code style
+
+- Minimal diffs; no drive-by refactors
+- No unnecessary dependencies
+- No secrets, API keys, or sample PII in the repo
+- Use `.env.example` with placeholders
+
+## Local demo
+
+```bash
+cd web && npm run dev
+cd mobile && npx expo start
+cd backend && go run main.go
+```
+
+Backend default: `http://localhost:8080`. Web CORS is enabled for local origins.
+
+## Avoid
+
+- Production-grade abstractions, heavy CI, or auth unless needed for demo
+- Referencing folders outside this workspace
+- Globally ignoring all `.png`/`.jpg` files
