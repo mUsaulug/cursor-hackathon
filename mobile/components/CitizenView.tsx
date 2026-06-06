@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -47,6 +49,24 @@ export function CitizenView({ role }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [photoFallback, setPhotoFallback] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ uri: string; name: string; type: string } | null>(null);
+
+  const pickImage = useCallback(async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets.length > 0) {
+      const asset = result.assets[0];
+      const ext = asset.uri.split('.').pop() ?? 'jpg';
+      setSelectedImage({
+        uri: asset.uri,
+        name: `report.${ext}`,
+        type: asset.mimeType ?? `image/${ext}`,
+      });
+    }
+  }, []);
 
   const fetchDemo = useCallback(async () => {
     try {
@@ -88,13 +108,10 @@ export function CitizenView({ role }: Props) {
       return;
     }
 
-    const imageFile = getPlaceholderImage();
+    const imageFile = selectedImage ?? getPlaceholderImage();
     if (!imageFile) {
       setPhotoFallback(true);
-      Alert.alert(
-        'Foto yükleme',
-        'Foto yükleme cihazda kamerayla yapılır. Yerel görsel bulunamadı.',
-      );
+      Alert.alert('Foto gerekli', 'Lütfen galeriden bir fotoğraf seçin.');
       return;
     }
 
@@ -105,6 +122,7 @@ export function CitizenView({ role }: Props) {
     try {
       const formData = new FormData();
       formData.append('description', description.trim());
+      formData.append('source_type', 'citizen_mobile');
       formData.append('lat', lat);
       formData.append('lng', lng);
       appendFile(formData, 'image', imageFile);
@@ -133,7 +151,7 @@ export function CitizenView({ role }: Props) {
     } finally {
       setSubmitting(false);
     }
-  }, [description, lat, lng, role]);
+  }, [description, lat, lng, role, selectedImage]);
 
   if (loading) {
     return (
@@ -181,8 +199,13 @@ export function CitizenView({ role }: Props) {
                 {latestAnalysis.detections.length}
               </Text>
             </View>
+            <Text style={styles.demoNote}>
+              Önceden hesaplanmış demo yolu — düşük güven tespitleri inceleme
+              gerektirir.
+            </Text>
             {latestAnalysis.detections.slice(0, 3).map((det) => {
               const priorityStyle = getPriorityStyle(det.priority);
+              const needsReview = det.review_status === 'needs_review';
               return (
                 <View key={det.id} style={styles.detectionRow}>
                   <Text style={styles.detectionLabel}>
@@ -193,6 +216,13 @@ export function CitizenView({ role }: Props) {
                       {det.priority}
                     </Text>
                   </View>
+                  {needsReview ? (
+                    <View style={[sharedStyles.chip, styles.reviewChip]}>
+                      <Text style={[sharedStyles.chipText, styles.reviewChipText]}>
+                        İnceleme gerekli
+                      </Text>
+                    </View>
+                  ) : null}
                   <Text style={styles.detectionMeta}>
                     Güven: {formatConfidence(det.confidence)}
                   </Text>
@@ -210,14 +240,24 @@ export function CitizenView({ role }: Props) {
 
       <View style={sharedStyles.card}>
         <Text style={sharedStyles.cardTitle}>Sorun Bildir</Text>
-        <Text style={sharedStyles.hintText}>
-          Fotoğraf için uygulama simgesi kullanılır (demo). Gerçek cihazda kamera
-          ile çekim yapılır.
-        </Text>
+
+        {selectedImage ? (
+          <Image
+            source={{ uri: selectedImage.uri }}
+            style={styles.preview}
+            resizeMode="cover"
+          />
+        ) : null}
+
+        <Pressable style={styles.photoButton} onPress={pickImage}>
+          <Text style={styles.photoButtonText}>
+            {selectedImage ? 'Fotoğrafı Değiştir' : 'Fotoğraf Seç'}
+          </Text>
+        </Pressable>
 
         {photoFallback ? (
           <Text style={styles.fallbackText}>
-            Foto yükleme cihazda kamerayla yapılır
+            Lütfen galeriden bir fotoğraf seçin
           </Text>
         ) : null}
 
@@ -316,6 +356,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#b00020',
   },
+  demoNote: {
+    fontSize: 12,
+    color: '#b45309',
+    backgroundColor: '#fffbeb',
+    padding: 8,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  reviewChip: {
+    backgroundColor: '#fef3c7',
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  reviewChipText: {
+    color: '#b45309',
+  },
   detectionRow: {
     marginBottom: 10,
     paddingBottom: 10,
@@ -337,6 +393,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 4,
+  },
+  preview: {
+    width: '100%',
+    height: 160,
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: '#e5e7eb',
+  },
+  photoButton: {
+    borderWidth: 1.5,
+    borderColor: '#1565c0',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  photoButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1565c0',
   },
   fallbackText: {
     fontSize: 14,

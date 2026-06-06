@@ -1,20 +1,10 @@
-import { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CitizenView } from './components/CitizenView';
 import { FieldStaffView } from './components/FieldStaffView';
 import { API_URL } from './api';
-import { sharedStyles } from './theme';
-import type { Report, Role } from './types';
+import type { Role } from './types';
 
 type RoleOption = {
   role: Role;
@@ -26,140 +16,8 @@ const ROLE_OPTIONS: RoleOption[] = [
   { role: 'field_staff', label: 'Saha' },
 ];
 
-type ActiveTab = 'analysis' | 'report';
-
-type SubmitState =
-  | { status: 'idle' }
-  | { status: 'loading' }
-  | { status: 'success'; reportId: string }
-  | { status: 'error'; message: string };
-
-function ReportTab() {
-  const [description, setDescription] = useState('');
-  const [lat, setLat] = useState('');
-  const [lng, setLng] = useState('');
-  const [submitState, setSubmitState] = useState<SubmitState>({ status: 'idle' });
-
-  const handleSubmit = useCallback(async () => {
-    if (!description.trim()) {
-      setSubmitState({ status: 'error', message: 'Açıklama alanı zorunludur.' });
-      return;
-    }
-
-    setSubmitState({ status: 'loading' });
-
-    try {
-      const body = new FormData();
-      body.append('description', description.trim());
-      body.append('source_type', 'citizen_mobile');
-      if (lat.trim()) {
-        body.append('lat', lat.trim());
-      }
-      if (lng.trim()) {
-        body.append('lng', lng.trim());
-      }
-
-      const res = await fetch(`${API_URL}/api/v1/reports`, {
-        method: 'POST',
-        headers: { 'X-Role': 'citizen' },
-        body,
-      });
-
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? `Sunucu hatası: ${res.status}`);
-      }
-
-      const report = (await res.json()) as Report;
-      setSubmitState({ status: 'success', reportId: report.report_id });
-      setDescription('');
-      setLat('');
-      setLng('');
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : 'Bilinmeyen bir hata oluştu.';
-      setSubmitState({ status: 'error', message });
-    }
-  }, [description, lat, lng]);
-
-  const isLoading = submitState.status === 'loading';
-
-  return (
-    <ScrollView
-      style={tabStyles.scroll}
-      contentContainerStyle={tabStyles.scrollContent}
-      keyboardShouldPersistTaps="handled"
-    >
-      {submitState.status === 'success' && (
-        <View style={tabStyles.successCard}>
-          <Text style={tabStyles.successText}>
-            Bildiriminiz gönderildi!{'\n'}
-            <Text style={tabStyles.successId}>#{submitState.reportId}</Text>
-          </Text>
-        </View>
-      )}
-
-      {submitState.status === 'error' && (
-        <View style={tabStyles.errorCard}>
-          <Text style={tabStyles.errorText}>{submitState.message}</Text>
-        </View>
-      )}
-
-      <View style={sharedStyles.card}>
-        <Text style={sharedStyles.cardTitle}>Sorun Bildir</Text>
-
-        <Text style={tabStyles.fieldLabel}>Açıklama *</Text>
-        <TextInput
-          style={[sharedStyles.input, sharedStyles.inputMultiline]}
-          value={description}
-          onChangeText={(text) => setDescription(text)}
-          placeholder="Örn: Kaldırımda çukur var"
-          placeholderTextColor="#999"
-          multiline
-          editable={!isLoading}
-        />
-
-        <Text style={tabStyles.fieldLabel}>Konum (opsiyonel)</Text>
-        <View style={tabStyles.coordRow}>
-          <TextInput
-            style={[sharedStyles.input, tabStyles.coordInput]}
-            value={lat}
-            onChangeText={(text) => setLat(text)}
-            keyboardType="decimal-pad"
-            placeholder="Enlem"
-            placeholderTextColor="#999"
-            editable={!isLoading}
-          />
-          <TextInput
-            style={[sharedStyles.input, tabStyles.coordInput]}
-            value={lng}
-            onChangeText={(text) => setLng(text)}
-            keyboardType="decimal-pad"
-            placeholder="Boylam"
-            placeholderTextColor="#999"
-            editable={!isLoading}
-          />
-        </View>
-
-        <Pressable
-          style={[sharedStyles.button, isLoading && sharedStyles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={sharedStyles.buttonText}>Bildirimi Gönder</Text>
-          )}
-        </Pressable>
-      </View>
-    </ScrollView>
-  );
-}
-
 export default function App() {
   const [role, setRole] = useState<Role>('citizen');
-  const [activeTab, setActiveTab] = useState<ActiveTab>('analysis');
 
   return (
     <View style={styles.container}>
@@ -195,60 +53,11 @@ export default function App() {
       </View>
 
       <View style={styles.content}>
-        {activeTab === 'analysis' ? (
-          role === 'citizen' ? (
-            <CitizenView role={role} />
-          ) : (
-            <FieldStaffView role={role} />
-          )
+        {role === 'citizen' ? (
+          <CitizenView role={role} />
         ) : (
-          <ReportTab />
+          <FieldStaffView role={role} />
         )}
-      </View>
-
-      {/* Bottom Tab Bar */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => setActiveTab('analysis')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.tabIndicator,
-              activeTab === 'analysis' && styles.tabIndicatorActive,
-            ]}
-          />
-          <Text
-            style={[
-              styles.tabLabel,
-              activeTab === 'analysis' && styles.tabLabelActive,
-            ]}
-          >
-            Analiz
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.tabItem}
-          onPress={() => setActiveTab('report')}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.tabIndicator,
-              activeTab === 'report' && styles.tabIndicatorActive,
-            ]}
-          />
-          <Text
-            style={[
-              styles.tabLabel,
-              activeTab === 'report' && styles.tabLabelActive,
-            ]}
-          >
-            Bildirim
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -320,94 +129,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 12,
-  },
-  // ── Bottom Tab Bar ──
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-    paddingBottom: 20,
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  tabIndicator: {
-    height: 3,
-    width: 32,
-    borderRadius: 2,
-    backgroundColor: 'transparent',
-    marginBottom: 4,
-  },
-  tabIndicatorActive: {
-    backgroundColor: '#0f172a',
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#94a3b8',
-  },
-  tabLabelActive: {
-    color: '#0f172a',
-    fontWeight: '700',
-  },
-});
-
-// ── ReportTab styles ──
-const tabStyles = StyleSheet.create({
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#444',
-    marginBottom: 6,
-  },
-  coordRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  coordInput: {
-    flex: 1,
-  },
-  successCard: {
-    backgroundColor: '#dcfce7',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#86efac',
-  },
-  successText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#16a34a',
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  successId: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#166534',
-  },
-  errorCard: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 10,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#fca5a5',
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#dc2626',
-    lineHeight: 20,
+    paddingBottom: 24,
   },
 });
