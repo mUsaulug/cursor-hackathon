@@ -1,12 +1,30 @@
-# Cursor Hackathon Istanbul — Urban AI
+# CivicLens Core — Urban AI (Cursor Hackathon Istanbul)
 
-AI-driven urban solutions hackathon workspace. Three independent apps in one repo.
+**CivicLens Core** turns street-level AI detections into KVKK-safe,
+human-reviewable, maintenance-prioritized municipal actions. The model only says
+*what* it sees; the Go core decides *what it means for the municipality* —
+deterministically, with privacy and human review built in.
+
+```
+HF detection  ->  CivicLens Core (Go)              ->  Municipal action
+{traffic light}   privacy guard -> normalize ->         {traffic_signal,
+ score 0.91        confidence -> review -> priority       priority: medium,
+                                                          review: auto_accepted,
+                                                          kvkk_safe: true}
+```
+
+Three independent apps in one repo:
 
 | App | Stack | Folder | Deploy |
 |-----|-------|--------|--------|
-| Web | Next.js | `web/` | Vercel |
-| Mobile | Expo | `mobile/` | Expo EAS / dev build |
-| API | Go | `backend/` | Render |
+| Web dashboard | Next.js | `web/` | Vercel |
+| Mobile field view | Expo | `mobile/` | Expo EAS / dev build |
+| Vision API | Go (hexagonal) | `backend/` | Render |
+
+The backend follows the design doc's hexagonal layout
+(`internal/domain | application | infrastructure | shared`) using the Go standard
+library only. `masterfabric-go` was not delivered to the workspace; the layers
+map 1:1 so it can be swapped in later (see `docs/DECISIONS.md`).
 
 **Mandatory constraints (official bulletin):**
 
@@ -29,10 +47,23 @@ AI-driven urban solutions hackathon workspace. Three independent apps in one rep
 
 ```bash
 cd backend
-go run main.go
+go run .
 ```
 
 → `http://localhost:8080` — verify with `curl http://localhost:8080/health`
+
+Try the vision API (no key needed — precomputed-first):
+
+```bash
+curl -X POST "http://localhost:8080/api/v1/vision/analyze?source_ref=sample_road_damage&mode=road_damage"
+curl http://localhost:8080/api/v1/vision/demo-results
+```
+
+Run the backend tests (unit + E2E):
+
+```bash
+cd backend && go test ./...
+```
 
 ### 2. Web (Next.js)
 
@@ -74,9 +105,14 @@ npx expo start
 │   │   └── backend.mdc        # Auto-attached: Go rules
 │   └── mcp.json               # GitHub MCP server config
 ├── docs/
+│   ├── 2026-06-06-civiclens-core-design.md  # Architecture design doc
+│   ├── MODEL_CARD.md          # Models, datasets, decision rules
+│   ├── rules/                 # ontology / priority / confidence YAML (SSOT)
 │   ├── PRIVACY.md             # KVKK anonymization & deletion rules
+│   ├── KVKK-COMPLIANCE.md     # Signed deletion/anonymization record
 │   ├── DEMO.md                # Reproducible demo runbook
 │   └── DECISIONS.md           # Technical decision log
+├── eval/                      # Smoke harness + synthetic samples + blur proof
 ├── web/                       # Next.js frontend
 ├── mobile/                    # Expo mobile app
 └── backend/                   # Go HTTP API
@@ -90,10 +126,34 @@ npx expo start
 | Mobile | `mobile/.env` | `EXPO_PUBLIC_API_URL` | `http://localhost:8080` |
 | Backend | `backend/.env` | `PORT` | `8080` |
 
-External services (add to the relevant app's local `.env` when wired up, never commit real values):
+External services (all optional — the demo runs precomputed-first without any key):
 
-- `GOOGLE_STREET_VIEW_API_KEY` — Google Street View API (first 10k requests free)
-- `HUGGINGFACE_TOKEN` — Hugging Face model/dataset access
+- `HF_API_TOKEN` — enables live HF DETR inference (`mode=live_hf`); absent → precomputed fallback
+- `HF_INFERENCE_BASE_URL` — override the HF inference base (default `https://router.huggingface.co/hf-inference/models`)
+- `OPENROUTER_API_KEY` / `OPENROUTER_MODEL` — optional LLM that rewrites only the report summary prose
+- `GOOGLE_STREET_VIEW_API_KEY` — enables the opt-in Street View source (blur-before-inference)
+
+Never commit `.env` files or real keys. Use `.env.example` placeholders only.
+
+## Vision API (backend)
+
+Base URL: `NEXT_PUBLIC_API_URL` / `EXPO_PUBLIC_API_URL` (default `http://localhost:8080`).
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health`, `/health/live`, `/health/ready` | Health checks |
+| POST | `/api/v1/vision/analyze` | Analyze an uploaded image (multipart `image`) or a sample (`?source_ref=&mode=`) |
+| GET | `/api/v1/vision/analyze/{id}` | Fetch a stored analysis |
+| GET | `/api/v1/vision/demo-results` | Two reproducible precomputed scenes |
+| GET | `/api/v1/vision/model-info` | Active modes/models + limitations (transparency) |
+| GET | `/api/v1/vision/privacy-report` | KVKK status of the latest analysis |
+| GET | `/api/v1/vision/summary` | Maintenance report for the latest analysis |
+| GET | `/api/v1/vision/reviews` | Needs-review detections (human-in-the-loop queue) |
+| PATCH | `/api/v1/vision/reviews/{detectionId}` | Human accept/reject override |
+| POST | `/api/v1/vision/report` | Maintenance report (OpenRouter prose or local fallback) |
+
+Decision rules live in [`docs/rules/`](docs/rules) and the model card in
+[`docs/MODEL_CARD.md`](docs/MODEL_CARD.md).
 
 Never commit `.env` files. Use `.env.example` placeholders only.
 
@@ -120,20 +180,26 @@ Full checklist: [`docs/PRIVACY.md`](docs/PRIVACY.md)
 
 See [`AGENTS.md`](AGENTS.md) for agent rules: minimal diffs, no secrets, strict privacy.
 
-### How we use Cursor (fill in during the event)
+### How we used Cursor
 
-- **Agentic ruleset:** `.cursor/rules/` (always-apply + per-app scoped rules) drives every agent session.
-- **Modes used:** _(e.g. Plan Mode for multi-file features, Agent for implementation, Debug for ...)_ — TODO
-- **Prompt techniques:** _(e.g. plan-then-build, file-scoped `@Files`, smoke-test-after-change loop)_ — TODO
-- **MCP:** GitHub MCP (`.cursor/mcp.json`) for branch/PR/commit assistance. — TODO: note how it helped
+- **Agentic ruleset:** `.cursor/rules/` (always-apply + per-app scoped rules) constrained every session
+  — e.g. `backend.mdc` "stdlib only" drove a custom minimal YAML reader instead of adding a dependency.
+- **Plan Mode:** the whole CivicLens Core build started from a reviewed plan in `.cursor/plans/`; the
+  agent reconciled the design doc against the kickoff prompt (caught Redis/Kafka and section-count
+  discrepancies) before writing code.
+- **Parallel subagents:** the web dashboard and the mobile field view were built by two background
+  subagents running on `composer-2.5-fast` while the parent agent (Claude) built the Go blur/OpenRouter
+  layer — independent workstreams in parallel.
+- **Hugging Face MCP:** used to (1) verify `facebook/detr-resnet-50` and `rezzzq/yolo12s-road-damage-rdd2022`
+  metadata and the inference response schema, (2) generate KVKK-safe synthetic street images
+  (`eval/sample_images`) with the Z-Image / FLUX spaces, and (3) produce the blur-verification scene.
+- **Verification loop:** every phase ran `go build/vet/test` + runtime `curl` smoke + `ReadLints` before
+  an incremental commit.
 
-### Cursor CLI & SDK (bonus points)
+### Cursor CLI & SDK
 
-The bulletin awards **extra AI-adaptation credit** for using Cursor CLI and/or the Cursor SDK in the
-workflow. If used, document it here:
-
-- **Cursor CLI:** _(what automation/commands — e.g. scripted agent runs, batch edits)_ — TODO
-- **Cursor SDK:** _(any scripts/CI built on `@cursor/sdk` or `cursor-sdk`)_ — TODO
+- **Cursor CLI / SDK:** not used in this build. (The HF MCP tool surface — not the Cursor SDK — drove the
+  AI integrations.) Recorded honestly per the bulletin.
 
 ### Commit discipline (mandatory)
 
@@ -145,8 +211,9 @@ imagery, or build outputs. See [`AGENTS.md`](AGENTS.md#commit-discipline-mandato
 
 | Task | Model |
 |------|-------|
-| Single-file edits, boilerplate, refactors | `claude-sonnet-4-5` (default) |
-| Planning features that span 2+ apps | `claude-opus-4` |
+| Cross-cutting domain/use-case design + integration | parent agent (Claude) |
+| Well-scoped UI subagents (web, mobile) | `composer-2.5-fast` |
+| Single-file edits, boilerplate, refactors | `claude-sonnet-4-5` |
 | Tab autocomplete | Cursor built-in (leave as-is) |
 
 ### Plan Mode (Shift+Tab in Agent)
