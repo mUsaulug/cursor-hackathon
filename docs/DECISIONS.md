@@ -20,6 +20,10 @@ Short log of significant decisions made during the hackathon. Update as you go.
 | Build kickoff | Precomputed-first inference; live HF DETR + OpenRouter optional behind env vars | No API keys provided; demo must run offline and reproducibly | Reliable demo path with no live dependency; live path degrades gracefully | Team |
 | Build kickoff | Rule YAML files are the source of truth, read by a minimal stdlib YAML reader (no `gopkg.in/yaml.v3`) | `backend.mdc` forbids non-stdlib deps; rules must stay human-editable | `docs/rules/*.yaml` drive normalizer/priority/confidence; schema capped at 2 nesting levels | Team |
 | Build kickoff | Use the Hugging Face MCP to generate REAL precomputed fixtures and KVKK-safe synthetic sample images (not mock) | MCP gives real inference (`SAM3`) and reproducible image-gen without shipping an API key | Stronger "precomputed inference, not mock" claim; PII-avoidance by design | Team |
+| Wave 2 | Reframe product around citizen/staff reports (not a municipal camera archive) | Real, sellable data source the system generates itself; archive may not exist | Adds report/task/evidence/identity contexts on top of the vision core | Team |
+| Wave 2 | KVKK becomes active blur-before-inference (not avoidance-by-design) | Citizen/staff photos are real PII (faces/plates) | Mandatory ingest anonymizer; raw never persisted; `pii_strategy=blur_applied` | Team |
+| Wave 2 | Defer Postgres/Redis/Kafka adapters to a product step; keep in-memory behind ports | Need running services + non-stdlib deps; not available in the hackathon env | Demo runs in-memory; swap is cheap since ports already exist | Team |
+| Wave 2 | RBAC via X-Role header now, JWT/masterfabric-go later; add audit trail | masterfabric-go repo not delivered; accountability still required | 4 roles enforced at handlers; every mutating request audited (KVKK) | Team |
 
 ## How to use this log
 
