@@ -11,37 +11,37 @@ writing**. This file is that document — complete and sign it before the jury r
 
 | Field | Value |
 |-------|-------|
-| Team name | _TODO_ |
+| Team name | _TODO (fill before jury)_ |
 | Members | _TODO_ |
-| Date | _TODO (2026-06-06)_ |
-| Data sources used | _e.g. Google Street View API / provided dataset / ... — TODO_ |
-| Model purpose | _Inanimate urban objects only (e.g. sign detection) — TODO_ |
+| Date | 2026-06-06 |
+| Data sources used | HF models (DETR, RDD2022 YOLO); synthetic images generated via HF MCP image-gen. Google Street View: opt-in, disabled by default (no key used in MVP). |
+| Model purpose | Inanimate urban objects only (road damage, traffic signals, street furniture, waste assets). |
 
 ## 2. Purpose-limitation attestation
 
-- [ ] Models target **inanimate urban objects only**.
-- [ ] No identity detection, face recognition, plate reading/OCR, or person/vehicle profiling was built or run.
-- [ ] Faces/plates were detected **only** to anonymize them.
+- [x] Models target **inanimate urban objects only**.
+- [x] No identity detection, face recognition, plate reading/OCR, or person/vehicle profiling was built or run.
+- [x] Faces/plates were detected **only** to anonymize them (blur utility), never to read or identify.
 
 ## 3. Anonymization
 
 | Item | Detail |
 |------|--------|
-| Method | _blur / pixelate / crop — TODO_ |
-| Applied before | _persistence / training / inference / transmission (all) — TODO_ |
-| Tool / model used | _TODO (e.g. Hugging Face model name)_ |
+| Method | Irreversible **pixelation** (block averaging) over PII regions |
+| Applied before | Inference, persistence, and transmission (in-memory, before any write) |
+| Tool / model used | `backend/internal/shared/imaging` (Go stdlib), CLI `backend/cmd/anonymize`; PII classes blocked deterministically by the privacy guard |
 | Reversible? | **No** (irreversible) |
-| Verification | _how you confirmed no raw faces/plates remain — TODO_ |
+| Verification | Visual proof in `eval/redaction/street_people_blurred.png` (pedestrian + vehicle pixelated); unit tests assert region-only, averaged (non-recoverable) output. MVP runtime stores no raw image (`raw_image_stored=false`). |
 
 ## 4. Raw data deletion
 
 | Field | Value |
 |-------|-------|
-| Where raw data was held | _local memory / temp dir path (never git) — TODO_ |
-| Deletion command(s) run | _e.g. `rm -rf data/raw uploads/raw` — TODO_ |
-| Deleted at (timestamp) | _TODO_ |
-| Remaining artifacts | _anonymized derivatives only — TODO_ |
-| Git history clean? | _confirm no raw media ever committed — TODO_ |
+| Where raw data was held | In-memory only during request handling; the one synthetic verification frame stayed in `/tmp` and was not committed |
+| Deletion command(s) run | `rm -f /tmp/street_people_raw.webp /tmp/street_people_raw.png` (raw verification frame); no `data/raw/` used |
+| Deleted at (timestamp) | _confirm at event end — TODO_ |
+| Remaining artifacts | Anonymized derivative only (`eval/redaction/street_people_blurred.png`) |
+| Git history clean? | Yes — no raw camera frames, faces, or plates committed; only anonymized/synthetic assets |
 
 ## 5. Security checklist
 
