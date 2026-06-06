@@ -46,7 +46,7 @@ func setCORS(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Vary", "Origin")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Role")
 	}
 }
 
@@ -69,6 +69,16 @@ func isAllowedOrigin(origin string) bool {
 		strings.HasPrefix(origin, "http://127.0.0.1:") ||
 		strings.HasPrefix(origin, "http://192.168.") ||
 		strings.HasPrefix(origin, "http://10.") {
+		return true
+	}
+
+	// Vercel deployments (preview + production)
+	if strings.HasSuffix(origin, ".vercel.app") {
+		return true
+	}
+
+	// Custom origin override via env (e.g. ALLOWED_ORIGIN=https://civiclens.example.com)
+	if custom := os.Getenv("ALLOWED_ORIGIN"); custom != "" && origin == custom {
 		return true
 	}
 
