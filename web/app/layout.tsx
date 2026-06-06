@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Urban AI — Web",
-  description: "Cursor Hackathon Istanbul — Next.js frontend",
+  title: "CivicLens Core",
+  description: "KVKK-safe urban maintenance triage dashboard",
 };
 
 export default function RootLayout({
